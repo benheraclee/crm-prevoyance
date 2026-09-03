@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rivage Prévoyance — CRM (démo)</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: #F7F6F2; }
+  #root { min-height: 100vh; display: flex; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/plain" id="app-source">
+const { useState } = React;
+
+/* ---- minimal inline icons (no external deps) ---- */
+const Icon = ({ d, size = 16, ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>{d}</svg>
+);
+const LayoutDashboard = (p) => <Icon {...p} d={<><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></>} />;
+const Users = (p) => <Icon {...p} d={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
+const GitBranch = (p) => <Icon {...p} d={<><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></>} />;
+const Search = (p) => <Icon {...p} d={<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>} />;
+const XIcon = (p) => <Icon {...p} d={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
+const ChevronLeft = (p) => <Icon {...p} d={<polyline points="15 18 9 12 15 6"/>} />;
+const ChevronRight = (p) => <Icon {...p} d={<polyline points="9 18 15 12 9 6"/>} />;
+
+const TODAY = new Date("2026-09-03");
+
+const CLIENTS = [
+  { id: 1, name: "Élodie Bertrand", city: "Genève", pillar: "3e pilier A", capital: 84200, deadline: "2026-09-18", status: "Actif", lastContact: "2026-08-12", advisor: "Benoit" },
+  { id: 2, name: "Marc Dufresne", city: "Nyon", pillar: "2e pilier", capital: 312500, deadline: "2026-11-02", status: "Suivi requis", lastContact: "2026-06-30", advisor: "Thaiana" },
+  { id: 3, name: "Sophie Rey", city: "Lausanne", pillar: "3e pilier B", capital: 46800, deadline: "2027-01-15", status: "Actif", lastContact: "2026-08-28", advisor: "Benoit" },
+  { id: 4, name: "Antoine Perret", city: "Carouge", pillar: "2e pilier", capital: 198000, deadline: "2026-09-09", status: "À recontacter", lastContact: "2026-05-14", advisor: "Thaiana" },
+  { id: 5, name: "Camille Vuillemin", city: "Vevey", pillar: "3e pilier A", capital: 61300, deadline: "2026-09-25", status: "Actif", lastContact: "2026-08-20", advisor: "Benoit" },
+  { id: 6, name: "Julien Maret", city: "Fribourg", pillar: "3e pilier A", capital: 39750, deadline: "2026-12-11", status: "Nouveau", lastContact: "2026-08-30", advisor: "Thaiana" },
+  { id: 7, name: "Nathalie Choffat", city: "Meyrin", pillar: "2e pilier", capital: 275400, deadline: "2026-09-06", status: "Suivi requis", lastContact: "2026-07-02", advisor: "Benoit" },
+  { id: 8, name: "Pierre-Alain Golay", city: "Sion", pillar: "3e pilier B", capital: 118900, deadline: "2027-03-20", status: "Actif", lastContact: "2026-08-05", advisor: "Thaiana" },
+  { id: 9, name: "Laure Piguet", city: "Montreux", pillar: "3e pilier A", capital: 52100, deadline: "2026-09-14", status: "Actif", lastContact: "2026-08-22", advisor: "Benoit" },
+  { id: 10, name: "Yann Chappuis", city: "Yverdon-les-Bains", pillar: "2e pilier", capital: 342600, deadline: "2026-10-30", status: "Nouveau", lastContact: "2026-08-15", advisor: "Thaiana" },
+  { id: 11, name: "Isabelle Roduit", city: "Genève", pillar: "3e pilier A", capital: 71400, deadline: "2026-09-11", status: "À recontacter", lastContact: "2026-04-18", advisor: "Benoit" },
+  { id: 12, name: "Damien Baudois", city: "Lausanne", pillar: "3e pilier B", capital: 96700, deadline: "2026-12-02", status: "Actif", lastContact: "2026-08-26", advisor: "Thaiana" },
+  { id: 13, name: "Chantal Nydegger", city: "Genève", pillar: "2e pilier", capital: 415300, deadline: "2026-09-08", status: "Suivi requis", lastContact: "2026-06-11", advisor: "Benoit" },
+  { id: 14, name: "Grégoire Emery", city: "Nyon", pillar: "3e pilier A", capital: 33200, deadline: "2027-02-05", status: "Actif", lastContact: "2026-08-19", advisor: "Thaiana" },
+];
+
+const ADVISORS = ["Tous", "Benoit", "Thaiana"];
+const ADVISOR_COLOR = { "Benoit": "#3B6EA5", "Thaiana": "#8B5FA3" };
+
+const HISTORY = {
+  1: ["12.08.2026 — Appel : confirmation du versement annuel", "03.05.2026 — Envoi du certificat de prévoyance", "14.01.2026 — Ouverture du dossier"],
+  2: ["30.06.2026 — Relance envoyée, sans réponse", "22.02.2026 — RDV annuel effectué", "10.09.2025 — Bilan de prévoyance"],
+};
+const DEFAULT_HISTORY = ["Aucun échange enregistré pour l'instant."];
+
+const PIPELINE_STAGES = ["Prospect", "Premier contact", "RDV fixé", "Proposition envoyée", "Signé"];
+
+const INITIAL_DEALS = [
+  { id: 101, name: "Frédéric Amaudruz", city: "Genève", pillar: "3e pilier A", estCapital: 45000, stage: "Prospect", advisor: "Benoit" },
+  { id: 102, name: "Valérie Schmid", city: "Lausanne", pillar: "2e pilier", estCapital: 220000, stage: "Prospect", advisor: "Thaiana" },
+  { id: 103, name: "Olivier Currat", city: "Nyon", pillar: "3e pilier B", estCapital: 68000, stage: "Premier contact", advisor: "Benoit" },
+  { id: 104, name: "Sandra Berthoud", city: "Vevey", pillar: "3e pilier A", estCapital: 38500, stage: "Premier contact", advisor: "Thaiana" },
+  { id: 105, name: "Thierry Glauser", city: "Fribourg", pillar: "2e pilier", estCapital: 305000, stage: "RDV fixé", advisor: "Benoit" },
+  { id: 106, name: "Anne-Sophie Blanc", city: "Carouge", pillar: "3e pilier A", estCapital: 52000, stage: "RDV fixé", advisor: "Thaiana" },
+  { id: 107, name: "Manuel Genoud", city: "Sion", pillar: "3e pilier B", estCapital: 91000, stage: "Proposition envoyée", advisor: "Benoit" },
+  { id: 108, name: "Céline Wenger", city: "Meyrin", pillar: "2e pilier", estCapital: 178000, stage: "Proposition envoyée", advisor: "Thaiana" },
+  { id: 109, name: "Bastien Rossier", city: "Montreux", pillar: "3e pilier A", estCapital: 41200, stage: "Signé", advisor: "Benoit" },
+];
+
+const TOTAL_PORTFOLIO = 5842;
+const TOTAL_CAPITAL = 612400000;
+
+function formatCHF(n) { return "CHF " + n.toLocaleString("fr-CH"); }
+function daysUntil(dateStr) { const d = new Date(dateStr + "T00:00:00"); return Math.round((d - TODAY) / 86400000); }
+function formatDate(dateStr) { const d = new Date(dateStr + "T00:00:00"); return d.toLocaleDateString("fr-CH", { day: "2-digit", month: "2-digit", year: "numeric" }); }
+
+const STATUS_CLASS = {
+  "Actif": "badge-accent",
+  "Suivi requis": "badge-amber",
+  "À recontacter": "badge-red",
+  "Nouveau": "badge-neutral",
+};
+
+function CRMPrototype() {
+  const [view, setView] = useState("dashboard");
+  const [search, setSearch] = useState("");
+  const [pillarFilter, setPillarFilter] = useState("Tous");
+  const [statusFilter, setStatusFilter] = useState("Tous");
+  const [advisorFilter, setAdvisorFilter] = useState("Tous");
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const [selected, setSelected] = useState(null);
+  const [deals, setDeals] = useState(INITIAL_DEALS);
+  const [toast, setToast] = useState("");
+
+  const upcoming = CLIENTS.filter((c) => daysUntil(c.deadline) <= 30 && daysUntil(c.deadline) >= 0)
+    .sort((a, b) => daysUntil(a.deadline) - daysUntil(b.deadline));
+
+  const PILLARS = ["Tous", "2e pilier", "3e pilier A", "3e pilier B"];
+  const STATUSES = ["Tous", "Actif", "Suivi requis", "À recontacter", "Nouveau"];
+
+  let filteredClients = CLIENTS.filter((c) =>
+    (c.name + " " + c.city).toLowerCase().includes(search.toLowerCase())
+  );
+  if (pillarFilter !== "Tous") filteredClients = filteredClients.filter((c) => c.pillar === pillarFilter);
+  if (statusFilter !== "Tous") filteredClients = filteredClients.filter((c) => c.status === statusFilter);
+  if (advisorFilter !== "Tous") filteredClients = filteredClients.filter((c) => c.advisor === advisorFilter);
+
+  if (sortKey) {
+    filteredClients = [...filteredClients].sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey];
+      if (sortKey === "deadline") { av = new Date(av); bv = new Date(bv); }
+      if (av < bv) return sortDir === "asc" ? -1 : 1;
+      if (av > bv) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }
+
+  function toggleSort(key) {
+    if (sortKey === key) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  const openDeals = deals.filter((d) => d.stage !== "Signé").length;
+
+  function moveStage(dealId, direction) {
+    setDeals((prev) =>
+      prev.map((d) => {
+        if (d.id !== dealId) return d;
+        const idx = PIPELINE_STAGES.indexOf(d.stage);
+        const next = idx + direction;
+        if (next < 0 || next >= PIPELINE_STAGES.length) return d;
+        return { ...d, stage: PIPELINE_STAGES[next] };
+      })
+    );
+  }
+
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2600);
+  }
+
+  return (
+    <div className="app">
+      <div className="sidebar">
+        <div className="brand">
+          Rivage Prévoyance
+          <span>Cabinet de conseil</span>
+        </div>
+        <div className={"nav-item" + (view === "dashboard" ? " active" : "")} onClick={() => setView("dashboard")}>
+          <LayoutDashboard size={16} /> Tableau de bord
+        </div>
+        <div className={"nav-item" + (view === "clients" ? " active" : "")} onClick={() => { setView("clients"); setPillarFilter("Tous"); }}>
+          <Users size={16} /> Clients
+        </div>
+        {view === "clients" && (
+          <div className="sub-nav">
+            {PILLARS.map((p) => (
+              <div
+                key={p}
+                className={"sub-nav-item" + (pillarFilter === p ? " active" : "")}
+                onClick={() => setPillarFilter(p)}
+              >
+                {p === "Tous" ? "Tous les clients" : p}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className={"nav-item" + (view === "pipeline" ? " active" : "")} onClick={() => setView("pipeline")}>
+          <GitBranch size={16} /> Pipeline
+        </div>
+        <div className="nav-spacer" />
+        <div className="sidebar-foot">
+          {TOTAL_PORTFOLIO.toLocaleString("fr-CH")} clients au portefeuille. Échantillon de démonstration ci-contre.
+        </div>
+      </div>
+
+      <div className="main" style={{ position: "relative" }}>
+        <div className="topbar">
+          <h1>
+            {view === "dashboard" && "Tableau de bord"}
+            {view === "clients" && "Clients"}
+            {view === "pipeline" && "Pipeline commercial"}
+          </h1>
+          {view === "clients" ? (
+            <div className="search-box">
+              <Search size={14} color="var(--ink-soft)" />
+              <input placeholder="Rechercher un nom, une ville…" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+          ) : (
+            <button className="btn-primary" onClick={() => showToast("Formulaire à connecter à votre base de données.")}>
+              + Nouveau client
+            </button>
+          )}
+        </div>
+
+        <div className="content">
+          {view === "dashboard" && (
+            <>
+              <div className="kpi-grid">
+                <div className="kpi"><div className="label">Clients actifs</div><div className="value">{TOTAL_PORTFOLIO.toLocaleString("fr-CH")}</div></div>
+                <div className="kpi"><div className="label">Capital sous suivi</div><div className="value">{formatCHF(TOTAL_CAPITAL)}</div></div>
+                <div className="kpi"><div className="label">Échéances à 30 jours</div><div className="value accent">{upcoming.length}</div></div>
+                <div className="kpi"><div className="label">Dossiers en pipeline</div><div className="value">{openDeals}</div></div>
+              </div>
+
+              <div className="panel-row">
+                <div className="panel">
+                  <h2>Prochaines échéances</h2>
+                  {upcoming.length === 0 && <div className="list-row muted">Aucune échéance dans les 30 prochains jours.</div>}
+                  {upcoming.map((c) => (
+                    <div className="list-row" key={c.id}>
+                      <div>{c.name}<div className="muted">{c.pillar} — {c.city}</div></div>
+                      <div className="num-right">{formatDate(c.deadline)}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="panel">
+                  <h2>Dossiers récemment suivis</h2>
+                  {CLIENTS.slice().sort((a, b) => new Date(b.lastContact) - new Date(a.lastContact)).slice(0, 6).map((c) => (
+                    <div className="list-row" key={c.id}>
+                      <div>{c.name}<div className="muted">{c.city}</div></div>
+                      <div className="num-right">{formatDate(c.lastContact)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {view === "clients" && (
+            <>
+              <div className="advisor-legend">
+                <span><span className="advisor-dot" style={{ background: ADVISOR_COLOR["Benoit"] }}></span>Benoit</span>
+                <span><span className="advisor-dot" style={{ background: ADVISOR_COLOR["Thaiana"] }}></span>Thaiana</span>
+              </div>
+              <div className="filter-bar">
+                <select className="filter-select" value={pillarFilter} onChange={(e) => setPillarFilter(e.target.value)}>
+                  {PILLARS.map((p) => <option key={p} value={p}>{p === "Tous" ? "Tous les piliers" : p}</option>)}
+                </select>
+                <select className="filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  {STATUSES.map((s) => <option key={s} value={s}>{s === "Tous" ? "Tous les statuts" : s}</option>)}
+                </select>
+                <select className="filter-select" value={advisorFilter} onChange={(e) => setAdvisorFilter(e.target.value)}>
+                  {ADVISORS.map((a) => <option key={a} value={a}>{a === "Tous" ? "Tous les conseillers" : a}</option>)}
+                </select>
+                {(pillarFilter !== "Tous" || statusFilter !== "Tous" || advisorFilter !== "Tous") && (
+                  <button className="filter-clear" onClick={() => { setPillarFilter("Tous"); setStatusFilter("Tous"); setAdvisorFilter("Tous"); }}>
+                    Réinitialiser
+                  </button>
+                )}
+              </div>
+              <div className="table-note">
+                {filteredClients.length} client{filteredClients.length > 1 ? "s" : ""} affiché{filteredClients.length > 1 ? "s" : ""} sur un échantillon de démonstration ({TOTAL_PORTFOLIO.toLocaleString("fr-CH")} au total dans le portefeuille réel).
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th className="sortable" onClick={() => toggleSort("name")}>Nom{sortKey === "name" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}</th>
+                    <th>Ville</th>
+                    <th className="sortable" onClick={() => toggleSort("pillar")}>Pilier{sortKey === "pillar" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}</th>
+                    <th className="sortable" onClick={() => toggleSort("capital")}>Capital{sortKey === "capital" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}</th>
+                    <th>Statut</th>
+                    <th className="sortable" onClick={() => toggleSort("advisor")}>Conseiller{sortKey === "advisor" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}</th>
+                    <th className="sortable" onClick={() => toggleSort("deadline")}>Prochaine échéance{sortKey === "deadline" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredClients.map((c) => (
+                    <tr key={c.id} onClick={() => setSelected(c)}>
+                      <td data-label="Nom" style={{ borderLeft: "3px solid " + ADVISOR_COLOR[c.advisor] }}>
+                        {c.name}
+                      </td>
+                      <td data-label="Ville">{c.city}</td>
+                      <td data-label="Pilier"><span className="pillar-tag">{c.pillar}</span></td>
+                      <td data-label="Capital" className="cell-num">{formatCHF(c.capital)}</td>
+                      <td data-label="Statut"><span className={"badge " + STATUS_CLASS[c.status]}>{c.status}</span></td>
+                      <td data-label="Conseiller">{c.advisor}</td>
+                      <td data-label="Échéance" className="cell-num">{formatDate(c.deadline)}</td>
+                    </tr>
+                  ))}
+                  {filteredClients.length === 0 && (
+                    <tr><td colSpan="7" style={{ textAlign: "center", color: "var(--ink-soft)", padding: "20px" }}>Aucun client ne correspond à ces filtres.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {view === "pipeline" && (
+            <div className="pipeline">
+              {PIPELINE_STAGES.map((stage) => {
+                const stageDeals = deals.filter((d) => d.stage === stage);
+                return (
+                  <div className="stage-col" key={stage}>
+                    <div className="stage-head"><span>{stage}</span><span>{stageDeals.length}</span></div>
+                    {stageDeals.map((d) => {
+                      const idx = PIPELINE_STAGES.indexOf(d.stage);
+                      return (
+                        <div className="stage-card" key={d.id} style={{ borderLeft: "3px solid " + ADVISOR_COLOR[d.advisor], background: ADVISOR_COLOR[d.advisor] + "0D" }}>
+                          <div className="name">{d.name}</div>
+                          <div className="muted">{d.pillar} — {d.city} · {d.advisor}</div>
+                          <div className="cap">{formatCHF(d.estCapital)}</div>
+                          <div className="stage-nav">
+                            <button disabled={idx === 0} onClick={() => moveStage(d.id, -1)}><ChevronLeft size={13} /></button>
+                            <button disabled={idx === PIPELINE_STAGES.length - 1} onClick={() => moveStage(d.id, 1)}><ChevronRight size={13} /></button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {stageDeals.length === 0 && <div className="muted" style={{ padding: "4px" }}>—</div>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {selected && (
+          <div className="detail-overlay" onClick={() => setSelected(null)}>
+            <div className="detail-panel" onClick={(e) => e.stopPropagation()}>
+              <div className="detail-head">
+                <div>
+                  <h2>{selected.name}</h2>
+                  <div className="muted">{selected.city}</div>
+                </div>
+                <button className="close-btn" onClick={() => setSelected(null)}><XIcon size={18} /></button>
+              </div>
+              <div className="detail-section">
+                <h3>Dossier de prévoyance</h3>
+                <div className="kv"><span>Pilier</span><span>{selected.pillar}</span></div>
+                <div className="kv"><span>Capital</span><span className="num-right">{formatCHF(selected.capital)}</span></div>
+                <div className="kv"><span>Statut</span><span><span className={"badge " + STATUS_CLASS[selected.status]}>{selected.status}</span></span></div>
+                <div className="kv">
+                  <span>Conseiller</span>
+                  <span><span className="advisor-dot" style={{ background: ADVISOR_COLOR[selected.advisor] }}></span>{selected.advisor}</span>
+                </div>
+                <div className="kv"><span>Prochaine échéance</span><span className="num-right">{formatDate(selected.deadline)}</span></div>
+                <div className="kv"><span>Dernier contact</span><span className="num-right">{formatDate(selected.lastContact)}</span></div>
+              </div>
+              <div className="detail-section">
+                <h3>Historique</h3>
+                {(HISTORY[selected.id] || DEFAULT_HISTORY).map((h, i) => <div className="hist-item" key={i}>{h}</div>)}
+              </div>
+              <div className="detail-section">
+                <h3>Notes</h3>
+                <div className="muted" style={{ fontSize: "12.5px" }}>Zone de notes libres — à connecter à la base de données du cabinet.</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {toast && <div className="toast">{toast}</div>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(CRMPrototype));
+</script>
+
+<script>
+  // Manually transform with the classic runtime so the output calls
+  // React.createElement directly instead of emitting "import" statements
+  // (which a plain <script> tag cannot execute and causes a blank page).
+  var source = document.getElementById("app-source").textContent;
+  var compiled = Babel.transform(source, {
+    presets: [["react", { runtime: "classic" }]]
+  }).code;
+  try {
+    new Function("React", "ReactDOM", "document", compiled)(React, ReactDOM, document);
+  } catch (e) {
+    document.getElementById("root").innerHTML =
+      '<pre style="padding:24px;color:#A23B2E;font-family:monospace;white-space:pre-wrap;">' +
+      'Erreur de chargement de la démo :\n' + e.message + '</pre>';
+  }
+</script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+* { box-sizing: border-box; }
+.app {
+  --bg: #F7F6F2; --surface: #FFFFFF; --sidebar-bg: #16213B; --sidebar-text: #A9B4C6;
+  --ink: #1B2333; --ink-soft: #5B6478; --accent: #2F6F5E; --accent-soft: #E3ECE8;
+  --amber: #A6761E; --amber-soft: #F3E9D6; --red: #A23B2E; --red-soft: #F5E3DF; --border: #E2DFD7;
+  font-family: 'IBM Plex Sans', sans-serif; color: var(--ink); background: var(--bg);
+  display: flex; width: 100%; min-height: 100vh;
+}
+.sidebar { width: 216px; flex-shrink: 0; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 22px 16px; }
+.brand { font-family: 'Source Serif 4', serif; font-size: 18px; color: #fff; font-weight: 600; padding: 0 8px 22px 8px; border-bottom: 1px solid rgba(255,255,255,0.12); margin-bottom: 18px; }
+.brand span { display: block; font-family: 'IBM Plex Sans', sans-serif; font-size: 11.5px; color: var(--sidebar-text); font-weight: 400; margin-top: 3px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 3px; font-size: 14px; cursor: pointer; color: var(--sidebar-text); margin-bottom: 2px; border-left: 2px solid transparent; }
+.nav-item:hover { color: #fff; }
+.nav-item.active { color: #fff; background: rgba(255,255,255,0.07); border-left: 2px solid var(--accent); }
+.sub-nav { margin: 2px 0 6px 10px; border-left: 1px solid rgba(255,255,255,0.14); }
+.sub-nav-item { padding: 7px 10px 7px 16px; font-size: 12.5px; color: var(--sidebar-text); cursor: pointer; }
+.sub-nav-item:hover { color: #fff; }
+.sub-nav-item.active { color: #fff; font-weight: 500; }
+.nav-spacer { flex: 1; }
+.sidebar-foot { font-size: 11.5px; color: var(--sidebar-text); padding: 10px 8px 0 8px; border-top: 1px solid rgba(255,255,255,0.12); line-height: 1.5; }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 18px 28px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.topbar h1 { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 600; margin: 0; }
+.search-box { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); padding: 7px 12px; width: 260px; background: var(--bg); }
+.search-box input { border: none; background: transparent; outline: none; font-size: 13.5px; width: 100%; color: var(--ink); font-family: 'IBM Plex Sans', sans-serif; }
+.btn-primary { background: var(--accent); color: #fff; border: none; padding: 9px 16px; font-size: 13.5px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-weight: 500; }
+.btn-primary:hover { background: #275b4d; }
+.content { padding: 26px 28px; overflow-y: auto; flex: 1; }
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 26px; }
+.kpi { background: var(--surface); padding: 18px 20px; }
+.kpi .label { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 8px; }
+.kpi .value { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 500; }
+.kpi .value.accent { color: var(--accent); }
+.panel-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 22px; }
+.panel { background: var(--surface); border: 1px solid var(--border); }
+.panel h2 { font-family: 'Source Serif 4', serif; font-size: 15.5px; font-weight: 600; margin: 0; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.list-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.list-row:last-child { border-bottom: none; }
+.list-row .muted { color: var(--ink-soft); font-size: 12.5px; }
+.list-row .num-right { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; }
+table { width: 100%; border-collapse: collapse; background: var(--surface); }
+thead th { text-align: left; font-size: 12px; color: var(--ink-soft); font-weight: 500; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+tbody td { padding: 11px 16px; font-size: 13.5px; border-bottom: 1px solid var(--border); }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--bg); }
+.cell-num { font-family: 'IBM Plex Mono', monospace; }
+.advisor-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+.advisor-legend { display: flex; gap: 16px; align-items: center; font-size: 12px; color: var(--ink-soft); margin-bottom: 14px; }
+.advisor-legend span { display: flex; align-items: center; gap: 6px; }
+.badge { display: inline-block; font-size: 11.5px; padding: 3px 8px; border: 1px solid transparent; }
+.badge-accent { background: var(--accent-soft); color: var(--accent); }
+.badge-amber { background: var(--amber-soft); color: var(--amber); }
+.badge-red { background: var(--red-soft); color: var(--red); }
+.badge-neutral { background: var(--bg); color: var(--ink-soft); border-color: var(--border); }
+.pillar-tag { font-size: 11.5px; color: var(--ink-soft); border: 1px solid var(--border); padding: 2px 7px; }
+.table-note { font-size: 12px; color: var(--ink-soft); margin-bottom: 12px; }
+.filter-bar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+.filter-select { border: 1px solid var(--border); background: var(--surface); padding: 7px 10px; font-size: 13px; color: var(--ink); font-family: 'IBM Plex Sans', sans-serif; }
+.filter-clear { border: none; background: none; color: var(--ink-soft); font-size: 12.5px; text-decoration: underline; cursor: pointer; padding: 4px; font-family: 'IBM Plex Sans', sans-serif; }
+.filter-clear:hover { color: var(--ink); }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--ink); }
+.detail-overlay { position: fixed; inset: 0; background: rgba(20,20,20,0.25); display: flex; justify-content: flex-end; }
+.detail-panel { width: 380px; max-width: 90vw; background: var(--surface); height: 100%; overflow-y: auto; border-left: 1px solid var(--border); }
+.detail-head { padding: 20px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; }
+.detail-head h2 { font-family: 'Source Serif 4', serif; font-size: 18px; margin: 0 0 4px 0; }
+.detail-head .muted { font-size: 13px; color: var(--ink-soft); }
+.close-btn { cursor: pointer; color: var(--ink-soft); background: none; border: none; }
+.detail-section { padding: 18px 22px; border-bottom: 1px solid var(--border); }
+.detail-section h3 { font-size: 12px; color: var(--ink-soft); margin: 0 0 10px 0; font-weight: 500; }
+.kv { display: flex; justify-content: space-between; font-size: 13.5px; padding: 6px 0; }
+.hist-item { font-size: 12.5px; color: var(--ink-soft); padding: 6px 0; border-bottom: 1px dashed var(--border); }
+.hist-item:last-child { border-bottom: none; }
+.pipeline { display: flex; gap: 14px; align-items: flex-start; }
+.stage-col { flex: 1; min-width: 0; }
+.stage-head { font-size: 12.5px; color: var(--ink-soft); padding: 0 4px 10px 4px; display: flex; justify-content: space-between; }
+.stage-card { background: var(--surface); border: 1px solid var(--border); padding: 12px 13px; margin-bottom: 10px; }
+.stage-card .name { font-size: 13.5px; font-weight: 500; margin-bottom: 3px; }
+.stage-card .muted { font-size: 12px; color: var(--ink-soft); margin-bottom: 8px; }
+.stage-card .cap { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; margin-bottom: 10px; }
+.stage-nav { display: flex; justify-content: space-between; }
+.stage-nav button { background: none; border: 1px solid var(--border); cursor: pointer; padding: 3px 7px; color: var(--ink-soft); }
+.stage-nav button:hover { color: var(--ink); border-color: var(--ink-soft); }
+.stage-nav button:disabled { opacity: 0.3; cursor: default; }
+.toast { position: fixed; bottom: 22px; right: 28px; background: var(--ink); color: #fff; font-size: 13px; padding: 11px 16px; max-width: 280px; }
+@media (max-width: 780px) {
+  .app { flex-direction: column; min-height: auto; }
+  .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 10px 14px; overflow-x: auto; }
+  .brand { display: none; }
+  .nav-spacer { display: none; }
+  .sidebar-foot { display: none; }
+  .nav-item { margin-bottom: 0; margin-right: 4px; white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; padding: 8px 10px; }
+  .nav-item.active { border-left: none; border-bottom: 2px solid var(--accent); background: transparent; }
+  .sub-nav { display: flex; margin: 0; border-left: none; }
+  .sub-nav-item { padding: 8px 8px; white-space: nowrap; border-bottom: 2px solid transparent; }
+  .sub-nav-item.active { border-bottom: 2px solid var(--accent); }
+  .topbar { flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 16px; }
+  .topbar h1 { font-size: 17px; }
+  .search-box { width: 100%; }
+  .btn-primary { width: 100%; }
+  .content { padding: 16px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); margin-bottom: 18px; }
+  .kpi { padding: 14px; }
+  .kpi .value { font-size: 18px; }
+  .panel-row { grid-template-columns: 1fr; gap: 14px; }
+  table { display: block; }
+  thead { display: none; }
+  tbody, tr, td { display: block; width: 100%; }
+  tbody tr { border: 1px solid var(--border); margin-bottom: 10px; padding: 4px 0; }
+  tbody td { border-bottom: none; padding: 5px 16px; }
+  tbody td::before { content: attr(data-label); display: block; font-size: 11px; color: var(--ink-soft); margin-bottom: 2px; }
+  .pipeline { overflow-x: auto; padding-bottom: 6px; }
+  .stage-col { min-width: 220px; }
+  .detail-panel { width: 100%; max-width: 100%; }
+  .filter-bar { gap: 8px; }
+  .filter-select { flex: 1; min-width: 130px; }
+}
+</style>
+</body>
+</html>

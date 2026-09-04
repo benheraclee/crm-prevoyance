@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rivage Prévoyance — CRM (démo)</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: #F7F6F2; }
+  #root { min-height: 100vh; display: flex; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/plain" id="app-source">
+const { useState } = React;
+
+/* ---- minimal inline icons (no external deps) ---- */
+const Icon = ({ d, size = 16, ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...p}>{d}</svg>
+);
+const LayoutDashboard = (p) => <Icon {...p} d={<><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></>} />;
+const Users = (p) => <Icon {...p} d={<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
+const GitBranch = (p) => <Icon {...p} d={<><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></>} />;
+const Search = (p) => <Icon {...p} d={<><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></>} />;
+const XIcon = (p) => <Icon {...p} d={<><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>} />;
+const ChevronLeft = (p) => <Icon {...p} d={<polyline points="15 18 9 12 15 6"/>} />;
+const ChevronRight = (p) => <Icon {...p} d={<polyline points="9 18 15 12 9 6"/>} />;
+const BarChart = (p) => <Icon {...p} d={<><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></>} />;
+
+const TODAY = new Date("2026-09-03");
+
+const INITIAL_PEOPLE = [
+  { id: 1, name: "Élodie Bertrand", city: "Genève", advisor: "Benoit", phone: "+41 79 123 45 01", address: "Rue du Rhône 12, 1204 Genève", genre: "Femme", country: "Suisse", situationFamiliale: "Célibataire", revenuSource: "Salariée", revenuAnnuel: 95000, logement: "Locataire", creditRestant: 0, estimationBien: 0, autresPlacements: "Compte titres chez PostFinance", documents: [], birthDate: "1985-04-12", lastModified: "2026-08-12" },
+  { id: 2, name: "Marc Dufresne", city: "Nyon", advisor: "Thaiana", phone: "+41 79 123 45 02", address: "Route de Divonne 5, 1260 Nyon", genre: "Homme", country: "Suisse", situationFamiliale: "Marié(e)", revenuSource: "Salarié", revenuAnnuel: 110000, logement: "Propriétaire", creditRestant: 320000, estimationBien: 650000, autresPlacements: "", documents: [], birthDate: "1978-11-03", lastModified: "2026-06-30" },
+  { id: 3, name: "Sophie Rey", city: "Lausanne", advisor: "Benoit", phone: "+41 79 123 45 03", address: "Avenue de la Gare 22, 1003 Lausanne", genre: "Femme", country: "Suisse", situationFamiliale: "Célibataire", revenuSource: "Salariée", revenuAnnuel: 78000, logement: "Locataire", creditRestant: 0, estimationBien: 0, autresPlacements: "", documents: [], birthDate: "1990-02-20", lastModified: "2026-08-28" },
+  { id: 4, name: "Antoine Perret", city: "Carouge", advisor: "Thaiana", phone: "+41 79 123 45 04", address: "Rue Saint-Joseph 8, 1227 Carouge", genre: "Homme", country: "Suisse", situationFamiliale: "Concubinage", revenuSource: "Indépendant", revenuAnnuel: 88000, logement: "Locataire", creditRestant: 0, estimationBien: 0, autresPlacements: "3e pilier chez Swiss Life", documents: [], birthDate: "1988-07-15", lastModified: "2026-05-14" },
+  { id: 5, name: "Camille Vuillemin", city: "Vevey", advisor: "Benoit", phone: "+41 79 123 45 05", address: "Rue du Simplon 14, 1800 Vevey", genre: "Femme", country: "Suisse", situationFamiliale: "Marié(e)", revenuSource: "Salariée", revenuAnnuel: 92000, logement: "Propriétaire", creditRestant: 210000, estimationBien: 540000, autresPlacements: "", documents: [], birthDate: "1982-09-01", lastModified: "2026-08-20" },
+  { id: 6, name: "Julien Maret", city: "Fribourg", advisor: "Thaiana", phone: "+41 79 123 45 06", address: "Rue de Lausanne 33, 1700 Fribourg", genre: "Homme", country: "Suisse", situationFamiliale: "Célibataire", revenuSource: "Salarié", revenuAnnuel: 71000, logement: "Locataire", creditRestant: 0, estimationBien: 0, autresPlacements: "", documents: [], birthDate: "1993-05-18", lastModified: "2026-08-30" },
+  { id: 7, name: "Nathalie Choffat", city: "Meyrin", advisor: "Benoit", phone: "+41 79 123 45 07", address: "Rue de la Prulay 9, 1217 Meyrin", genre: "Femme", country: "Suisse", situationFamiliale: "Divorcé(e)", revenuSource: "Salariée", revenuAnnuel: 105000, logement: "Propriétaire", creditRestant: 180000, estimationBien: 480000, autresPlacements: "Compte 3e pilier chez Helvetia", documents: [], birthDate: "1975-12-09", lastModified: "2026-07-02" },
+  { id: 8, name: "Pierre-Alain Golay", city: "Sion", advisor: "Thaiana", phone: "+41 79 123 45 08", address: "Avenue de la Gare 18, 1950 Sion", genre: "Homme", country: "Suisse", situationFamiliale: "Marié(e)", revenuSource: "Indépendant", revenuAnnuel: 130000, logement: "Propriétaire", creditRestant: 400000, estimationBien: 820000, autresPlacements: "", documents: [], birthDate: "1970-03-27", lastModified: "2026-08-05" },
+  { id: 9, name: "Laure Piguet", city: "Montreux", advisor: "Benoit", phone: "+41 79 123 45 09", address: "Grand-Rue 44, 1820 Montreux", genre: "Femme", country: "Suisse", situationFamiliale: "Veuf(ve)", revenuSource: "Salariée", revenuAnnuel: 68000, logement: "Locataire", creditRestant: 0, estimationBien: 0, autresPlacements: "", documents: [], birthDate: "1969-08-14", lastModified: "2026-08-22" },
+  { id: 10, name: "Yann Chappuis", city: "Yverdon-les-Bains", advisor: "Thaiana", phone: "+33 6 12 34 56 78", address: "Rue de Genève 4, 74100 Annemasse", genre: "Homme", country: "France", situationFamiliale: "Marié(e)", revenuSource: "Salarié", revenuAnnuel: 98000, logement: "Locataire", creditRestant: 0, estimationBien: 0, autresPlacements: "Assurance-vie en France", documents: [], birthDate: "1979-06-30", lastModified: "2026-08-15" },
+  { id: 11, name: "Isabelle Roduit", city: "Genève", advisor: "Benoit", phone: "+41 79 123 45 11", address: "Rue de Lausanne 55, 1201 Genève", genre: "Femme", country: "Suisse", situationFamiliale: "Marié(e)", revenuSource: "Salariée", revenuAnnuel: 87000, logement: "Propriétaire", creditRestant: 250000, estimationBien: 600000, autresPlacements: "", documents: [], birthDate: "1983-10-05", lastModified: "2026-04-18" },
+  { id: 12, name: "Damien Baudois", city: "Lausanne", advisor: "Thaiana", phone: "+41 79 123 45 12", address: "Avenue d'Ouchy 27, 1006 Lausanne", genre: "Homme", country: "Suisse", situationFamiliale: "Célibataire", revenuSource: "Salarié", revenuAnnuel: 82000, logement: "Locataire", creditRestant: 0, estimationBien: 0, autresPlacements: "", documents: [], birthDate: "1991-01-22", lastModified: "2026-08-26" },
+  { id: 13, name: "Chantal Nydegger", city: "Genève", advisor: "Benoit", phone: "+41 79 123 45 13", address: "Rue du Marché 3, 1204 Genève", genre: "Femme", country: "Suisse", situationFamiliale: "Divorcé(e)", revenuSource: "Salariée", revenuAnnuel: 115000, logement: "Propriétaire", creditRestant: 300000, estimationBien: 700000, autresPlacements: "Compte titres chez UBS", documents: [], birthDate: "1974-04-17", lastModified: "2026-06-11" },
+  { id: 14, name: "Grégoire Emery", city: "Nyon", advisor: "Thaiana", phone: "+41 79 123 45 14", address: "Chemin de la Vuarpillière 2, 1260 Nyon", genre: "Homme", country: "Suisse", situationFamiliale: "Concubinage", revenuSource: "Indépendant", revenuAnnuel: 76000, logement: "Locataire", creditRestant: 0, estimationBien: 0, autresPlacements: "", documents: [], birthDate: "1987-11-29", lastModified: "2026-08-19" },
+  { id: 15, name: "Nicolas Fatton", city: "Genève", advisor: "Benoit", phone: "+41 79 123 45 15", address: "Rue de Carouge 21, 1205 Genève", genre: "Homme", country: "Suisse", situationFamiliale: "Marié(e)", revenuSource: "Salarié", revenuAnnuel: 102000, logement: "Propriétaire", creditRestant: 280000, estimationBien: 620000, autresPlacements: "", documents: [], birthDate: "1980-02-08", lastModified: "2026-08-10" },
+];
+
+const INSURERS = ["Concordia Vie", "Nordis Assurances", "Cristal Prévoyance"];
+
+const INITIAL_DOSSIERS = [
+  { id: 1, personId: 1, pillar: "3e pilier A", capital: 84200, dateDebut: "2011-09-18", dateFin: "2026-09-18", primeAmount: 4200, primeFrequency: "Annuelle", status: "Actif", lastContact: "2026-08-12", productType: "Assurance", select: "Select 50", insurer: "Concordia Vie" },
+  { id: 2, personId: 2, pillar: "2e pilier", capital: 312500, dateSignature: "2021-11-02", status: "Suivi requis", lastContact: "2026-06-30", fund: "rendement", profile: "Modéré", signatureRate: 3 },
+  { id: 3, personId: 3, pillar: "3e pilier B", capital: 46800, dateDebut: "2012-01-15", dateFin: "2027-01-15", primeAmount: 3600, primeFrequency: "Annuelle", status: "Actif", lastContact: "2026-08-28", productType: "Bancaire" },
+  { id: 4, personId: 4, pillar: "2e pilier", capital: 198000, dateSignature: "2020-09-09", status: "À recontacter", lastContact: "2026-05-14", fund: "securite", profile: "Défensif", signatureRate: 2 },
+  { id: 5, personId: 5, pillar: "3e pilier A", capital: 61300, dateDebut: "2011-09-25", dateFin: "2026-09-25", primeAmount: 3000, primeFrequency: "Annuelle", status: "Actif", lastContact: "2026-08-20", productType: "Fonds de placement" },
+  { id: 6, personId: 6, pillar: "3e pilier A", capital: 39750, dateDebut: "2011-12-11", dateFin: "2026-12-11", primeAmount: 2400, primeFrequency: "Annuelle", status: "Nouveau", lastContact: "2026-08-30", productType: "Assurance", select: "Aucun", insurer: "Nordis Assurances" },
+  { id: 7, personId: 7, pillar: "2e pilier", capital: 275400, dateSignature: "2019-09-06", status: "Suivi requis", lastContact: "2026-07-02", fund: "croissance", profile: "Offensif", signatureRate: 3 },
+  { id: 8, personId: 8, pillar: "3e pilier B", capital: 118900, dateDebut: "2012-03-20", dateFin: "2027-03-20", primeAmount: 5400, primeFrequency: "Annuelle", status: "Actif", lastContact: "2026-08-05", productType: "Fonds de placement" },
+  { id: 9, personId: 9, pillar: "3e pilier A", capital: 52100, dateDebut: "2011-09-14", dateFin: "2026-09-14", primeAmount: 3200, primeFrequency: "Annuelle", status: "Actif", lastContact: "2026-08-22", productType: "Bancaire" },
+  { id: 10, personId: 10, pillar: "2e pilier", capital: 342600, dateSignature: "2022-10-30", status: "Nouveau", lastContact: "2026-08-15", fund: "securite", profile: "Modéré", signatureRate: 3 },
+  { id: 11, personId: 11, pillar: "3e pilier A", capital: 71400, dateDebut: "2011-09-11", dateFin: "2026-09-11", primeAmount: 3800, primeFrequency: "Annuelle", status: "À recontacter", lastContact: "2026-04-18", productType: "Assurance", select: "Select 100", insurer: "Cristal Prévoyance" },
+  { id: 12, personId: 12, pillar: "3e pilier B", capital: 96700, dateDebut: "2011-12-02", dateFin: "2026-12-02", primeAmount: 4000, primeFrequency: "Annuelle", status: "Actif", lastContact: "2026-08-26", productType: "Bancaire" },
+  { id: 13, personId: 13, pillar: "2e pilier", capital: 415300, dateSignature: "2018-09-08", status: "Suivi requis", lastContact: "2026-06-11", fund: "rendement", profile: "Offensif", signatureRate: 3 },
+  { id: 14, personId: 14, pillar: "3e pilier A", capital: 33200, dateDebut: "2012-02-05", dateFin: "2027-02-05", primeAmount: 2000, primeFrequency: "Annuelle", status: "Actif", lastContact: "2026-08-19", productType: "Fonds de placement" },
+  { id: 15, personId: 15, pillar: "2e pilier", capital: 145000, dateSignature: "2023-10-05", status: "Actif", lastContact: "2026-08-10", fund: "croissance", profile: "Modéré", signatureRate: 3 },
+  { id: 16, personId: 15, pillar: "3e pilier A", capital: 28000, dateDebut: "2011-09-20", dateFin: "2026-09-20", primeAmount: 1800, primeFrequency: "Annuelle", status: "Actif", lastContact: "2026-08-10", productType: "Assurance", select: "Select 50", insurer: "Concordia Vie" },
+];
+
+const RISK_PROFILES = ["Défensif", "Modéré", "Offensif"];
+const SELECT_OPTIONS = ["Select 50", "Select 100", "Aucun"];
+
+const FUNDS = [
+  { id: "rendement", name: "Lémania", anchor: "2026-06-30", recurringRate: 0.65 },
+  { id: "securite", name: "Liberty", anchor: "2026-07-15", recurringRate: 0.65 },
+  { id: "croissance", name: "Alpina", anchor: "2026-08-05", recurringRate: 0.65 },
+];
+
+const ADVISORS = ["Tous", "Benoit", "Thaiana"];
+const ADVISOR_COLOR = { "Benoit": "#3B6EA5", "Thaiana": "#8B5FA3" };
+
+const HISTORY = {
+  1: ["12.08.2026 — Appel : confirmation du versement annuel", "03.05.2026 — Envoi du certificat de prévoyance", "14.01.2026 — Ouverture du dossier"],
+  2: ["30.06.2026 — Relance envoyée, sans réponse", "22.02.2026 — RDV annuel effectué", "10.09.2025 — Bilan de prévoyance"],
+};
+const DEFAULT_HISTORY = ["Aucun échange enregistré pour l'instant."];
+
+const PIPELINE_STAGES = ["Prospect", "Premier contact", "RDV fixé", "Proposition envoyée", "Signé"];
+
+const INITIAL_DEALS = [
+  { id: 101, name: "Frédéric Amaudruz", city: "Genève", pillar: "3e pilier A", estCapital: 45000, stage: "Prospect", advisor: "Benoit", phone: "+41 79 234 56 01", rdvDate: "" },
+  { id: 102, name: "Valérie Schmid", city: "Lausanne", pillar: "2e pilier", estCapital: 220000, stage: "Prospect", advisor: "Thaiana", phone: "+41 79 234 56 02", rdvDate: "" },
+  { id: 103, name: "Olivier Currat", city: "Nyon", pillar: "3e pilier B", estCapital: 68000, stage: "Premier contact", advisor: "Benoit", phone: "+41 79 234 56 03", rdvDate: "" },
+  { id: 104, name: "Sandra Berthoud", city: "Vevey", pillar: "3e pilier A", estCapital: 38500, stage: "Premier contact", advisor: "Thaiana", phone: "+41 79 234 56 04", rdvDate: "" },
+  { id: 105, name: "Thierry Glauser", city: "Fribourg", pillar: "2e pilier", estCapital: 305000, stage: "RDV fixé", advisor: "Benoit", phone: "+41 79 234 56 05", rdvDate: "2026-09-10T14:00" },
+  { id: 106, name: "Anne-Sophie Blanc", city: "Carouge", pillar: "3e pilier A", estCapital: 52000, stage: "RDV fixé", advisor: "Thaiana", phone: "+41 79 234 56 06", rdvDate: "2026-09-12T09:30" },
+  { id: 107, name: "Manuel Genoud", city: "Sion", pillar: "3e pilier B", estCapital: 91000, stage: "Proposition envoyée", advisor: "Benoit", phone: "+41 79 234 56 07", rdvDate: "" },
+  { id: 108, name: "Céline Wenger", city: "Meyrin", pillar: "2e pilier", estCapital: 178000, stage: "Proposition envoyée", advisor: "Thaiana", phone: "+41 79 234 56 08", rdvDate: "" },
+  { id: 109, name: "Bastien Rossier", city: "Montreux", pillar: "3e pilier A", estCapital: 41200, stage: "Signé", advisor: "Benoit", phone: "+41 79 234 56 09", rdvDate: "" },
+];
+
+const TOTAL_PORTFOLIO = 5842;
+const TOTAL_CAPITAL = 612400000;
+
+function formatCHF(n) { return "CHF " + n.toLocaleString("fr-CH"); }
+function daysUntil(dateStr) { const d = new Date(dateStr + "T00:00:00"); return Math.round((d - TODAY) / 86400000); }
+function formatDate(dateStr) { const d = new Date(dateStr + "T00:00:00"); return d.toLocaleDateString("fr-CH", { day: "2-digit", month: "2-digit", year: "numeric" }); }
+function nextQuarterly(dateStr) {
+  let d = new Date(dateStr + "T00:00:00");
+  while (d < TODAY) {
+    d = new Date(d.getFullYear(), d.getMonth() + 3, d.getDate());
+  }
+  return d;
+}
+function daysUntilDate(d) { return Math.round((d - TODAY) / 86400000); }
+
+const RETIREMENT_AGE = 65;
+function calcAge(birthDate) {
+  if (!birthDate) return null;
+  const b = new Date(birthDate + "T00:00:00");
+  let age = TODAY.getFullYear() - b.getFullYear();
+  const hasHadBirthdayThisYear = (TODAY.getMonth() > b.getMonth()) || (TODAY.getMonth() === b.getMonth() && TODAY.getDate() >= b.getDate());
+  if (!hasHadBirthdayThisYear) age--;
+  return age;
+}
+function retirementDate(birthDate) {
+  if (!birthDate) return null;
+  const b = new Date(birthDate + "T00:00:00");
+  return new Date(b.getFullYear() + RETIREMENT_AGE, b.getMonth(), b.getDate());
+}
+function yearsToRetirement(birthDate) {
+  const r = retirementDate(birthDate);
+  if (!r) return null;
+  return ((r - TODAY) / (365.25 * 86400000));
+}
+
+function icsDataUrl(deal) {
+  if (!deal.rdvDate) return null;
+  const start = new Date(deal.rdvDate);
+  const end = new Date(start.getTime() + 45 * 60000);
+  const fmt = (d) => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+  const lines = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Rivage Prevoyance//CRM//FR",
+    "BEGIN:VEVENT",
+    "UID:" + deal.id + "@rivage-prevoyance",
+    "DTSTAMP:" + fmt(new Date()),
+    "DTSTART:" + fmt(start),
+    "DTEND:" + fmt(end),
+    "SUMMARY:RDV " + deal.name + " (" + deal.pillar + ")",
+    "DESCRIPTION:Rendez-vous prospect — " + deal.pillar + ", capital estimé " + deal.estCapital + " CHF.",
+    "LOCATION:" + deal.city,
+    "END:VEVENT", "END:VCALENDAR",
+  ];
+  return "data:text/calendar;charset=utf8," + encodeURIComponent(lines.join("\r\n"));
+}
+
+function contractYears(dateDebut, dateFin) {
+  if (!dateDebut || !dateFin) return 0;
+  const d1 = new Date(dateDebut + "T00:00:00");
+  const d2 = new Date(dateFin + "T00:00:00");
+  return Math.max(0, (d2 - d1) / (365.25 * 86400000));
+}
+
+function computeCommission(dossier, rates) {
+  if (dossier.pillar === "2e pilier") return null; // handled at fund level, not per client
+  switch (dossier.productType) {
+    case "Bancaire":
+      return { type: "Bancaire", amount: 0, note: "Compte d'épargne — aucune commission." };
+    case "Assurance": {
+      const years = contractYears(dossier.dateDebut, dossier.dateFin);
+      const annualPremium = dossier.primeFrequency === "Mensuelle" ? (dossier.primeAmount || 0) * 12 : (dossier.primeAmount || 0);
+      const totalPremiums = Math.round(annualPremium * years);
+      return {
+        type: "Assurance",
+        amount: Math.round(totalPremiums * (rates.assurance / 100)),
+        note: "Commission unique à la souscription, sur le total des primes (" + formatCHF(annualPremium) + "/an × " + years.toFixed(0) + " ans ≈ " + formatCHF(totalPremiums) + ").",
+      };
+    }
+    case "Fonds de placement":
+      return {
+        type: "Fonds de placement",
+        amount: Math.round(dossier.capital * (rates.fonds / 100)),
+        note: "Commission de gestion annuelle (TER), estimée sur le capital du dossier.",
+      };
+    default:
+      return null;
+  }
+}
+
+const STATUS_CLASS = {
+  "Actif": "badge-accent",
+  "Suivi requis": "badge-amber",
+  "À recontacter": "badge-red",
+  "Nouveau": "badge-neutral",
+};
+
+function CRMPrototype() {
+  const [view, setView] = useState("dashboard");
+  const [search, setSearch] = useState("");
+  const [pillarFilter, setPillarFilter] = useState("Tous");
+  const [statusFilter, setStatusFilter] = useState("Tous");
+  const [advisorFilter, setAdvisorFilter] = useState("Tous");
+  const [sortKey, setSortKey] = useState(null);
+  const [sortDir, setSortDir] = useState("asc");
+  const [selectedId, setSelectedId] = useState(null);
+  const [simRate, setSimRate] = useState(3);
+  const [deals, setDeals] = useState(INITIAL_DEALS);
+  const [toast, setToast] = useState("");
+  const [people, setPeople] = useState(INITIAL_PEOPLE);
+  const [dossiers, setDossiers] = useState(INITIAL_DOSSIERS);
+  const [rates, setRates] = useState({ assurance: 4, fonds: 1 });
+  const [fundRates, setFundRates] = useState(
+    Object.fromEntries(FUNDS.map((f) => [f.id, f.recurringRate]))
+  );
+  const [insurers, setInsurers] = useState(INSURERS);
+
+  function updateFundRate(fundId, value) {
+    const n = parseFloat(value);
+    setFundRates((prev) => ({ ...prev, [fundId]: isNaN(n) ? 0 : n }));
+  }
+
+  function updateDossierField(dossierId, key, value) {
+    const n = parseFloat(value);
+    setDossiers((prev) => prev.map((d) => (d.id === dossierId ? { ...d, [key]: isNaN(n) ? 0 : n } : d)));
+  }
+
+  function uploadDocument(personId, file) {
+    if (!file) return;
+    const reader = new FileReader();
+    const todayStr = TODAY.toISOString().slice(0, 10);
+    reader.onload = () => {
+      setPeople((prev) => prev.map((p) => {
+        if (p.id !== personId) return p;
+        const docs = p.documents || [];
+        return { ...p, documents: [...docs, { name: file.name, dataUrl: reader.result }], lastModified: todayStr };
+      }));
+      showToast("Document \"" + file.name + "\" ajouté.");
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeDocument(personId, docIndex) {
+    const todayStr = TODAY.toISOString().slice(0, 10);
+    setPeople((prev) => prev.map((p) => {
+      if (p.id !== personId) return p;
+      const docs = (p.documents || []).filter((_, i) => i !== docIndex);
+      return { ...p, documents: docs, lastModified: todayStr };
+    }));
+  }
+
+  function touchPerson(personId) {
+    const todayStr = TODAY.toISOString().slice(0, 10);
+    setPeople((prev) => prev.map((p) => (p.id === personId ? { ...p, lastModified: todayStr } : p)));
+  }
+
+  function updateNotes(personId, value) {
+    setPeople((prev) => prev.map((p) => (p.id === personId ? { ...p, notes: value } : p)));
+  }
+
+  function saveSimulation(personId, capitalActuel, rate, years, projected) {
+    const todayStr = TODAY.toISOString().slice(0, 10);
+    setPeople((prev) => prev.map((p) => {
+      if (p.id !== personId) return p;
+      const sims = p.simulations || [];
+      return {
+        ...p,
+        simulations: [...sims, { date: todayStr, capitalActuel, rate, years, projected }],
+        lastModified: todayStr,
+      };
+    }));
+    showToast("Simulation enregistrée.");
+  }
+
+  function removeSimulation(personId, index) {
+    setPeople((prev) => prev.map((p) => {
+      if (p.id !== personId) return p;
+      const sims = (p.simulations || []).filter((_, i) => i !== index);
+      return { ...p, simulations: sims };
+    }));
+  }
+
+  const EMPTY_FORM = {
+    name: "", city: "", advisor: "Benoit", phone: "", address: "", genre: "Homme", country: "Suisse", birthDate: "",
+    situationFamiliale: "Célibataire", revenuSource: "", revenuAnnuel: "", logement: "Locataire",
+    creditRestant: "", estimationBien: "", autresPlacements: "", salaryFile: null,
+    pillar: "2e pilier", capital: "", status: "Nouveau",
+    dateSignature: "", dateDebut: "", dateFin: "", primeAmount: "", primeFrequency: "Annuelle",
+    fund: FUNDS[0].id, profile: "Modéré", signatureRate: "3", productType: "Bancaire", select: "Select 50", insurer: "",
+  };
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [formError, setFormError] = useState("");
+  const [addDossierFor, setAddDossierFor] = useState(null); // personId, or null = new person
+  const [editingDossierId, setEditingDossierId] = useState(null);
+  const [expandedFunds, setExpandedFunds] = useState({});
+
+  function toggleFundExpand(fundId) {
+    setExpandedFunds((prev) => ({ ...prev, [fundId]: !prev[fundId] }));
+  }
+
+  function updateForm(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function openNewClientForm() {
+    setAddDossierFor(null);
+    setEditingDossierId(null);
+    setForm(EMPTY_FORM);
+    setFormError("");
+    setShowForm(true);
+  }
+
+  function openAddDossierForm(personId) {
+    setAddDossierFor(personId);
+    setEditingDossierId(null);
+    setForm(EMPTY_FORM);
+    setFormError("");
+    setShowForm(true);
+  }
+
+  function openEditDossierForm(dossier) {
+    setAddDossierFor(dossier.personId);
+    setEditingDossierId(dossier.id);
+    setForm({
+      ...EMPTY_FORM,
+      pillar: dossier.pillar,
+      capital: String(dossier.capital),
+      status: dossier.status,
+      dateSignature: dossier.dateSignature || "",
+      dateDebut: dossier.dateDebut || "",
+      dateFin: dossier.dateFin || "",
+      primeAmount: dossier.primeAmount != null ? String(dossier.primeAmount) : "",
+      primeFrequency: dossier.primeFrequency || "Annuelle",
+      fund: dossier.fund || FUNDS[0].id,
+      profile: dossier.profile || "Modéré",
+      signatureRate: dossier.signatureRate != null ? String(dossier.signatureRate) : "3",
+      productType: dossier.productType || "Bancaire",
+      select: dossier.select || "Select 50",
+      insurer: dossier.insurer || "",
+    });
+    setFormError("");
+    setShowForm(true);
+  }
+
+  function dossierFieldsFromForm() {
+    const todayStr = TODAY.toISOString().slice(0, 10);
+    const dossier = {
+      pillar: form.pillar,
+      capital: Math.round(parseFloat(form.capital)),
+      status: form.status,
+    };
+    if (form.pillar === "2e pilier") {
+      dossier.dateSignature = form.dateSignature || todayStr;
+      dossier.fund = form.fund;
+      dossier.profile = form.profile;
+      const sig = parseFloat(form.signatureRate);
+      dossier.signatureRate = isNaN(sig) ? 3 : sig;
+      dossier.dateDebut = undefined; dossier.dateFin = undefined; dossier.primeAmount = undefined;
+      dossier.primeFrequency = undefined; dossier.productType = undefined; dossier.select = undefined; dossier.insurer = undefined;
+    } else {
+      dossier.dateDebut = form.dateDebut || todayStr;
+      dossier.dateFin = form.dateFin || todayStr;
+      dossier.primeAmount = form.primeAmount ? Math.round(parseFloat(form.primeAmount)) : 0;
+      dossier.primeFrequency = form.primeFrequency;
+      dossier.productType = form.productType;
+      dossier.dateSignature = undefined; dossier.fund = undefined; dossier.profile = undefined; dossier.signatureRate = undefined;
+      if (form.productType === "Assurance") {
+        dossier.select = form.select;
+        const insurerName = form.insurer.trim();
+        dossier.insurer = insurerName;
+        if (insurerName && !insurers.includes(insurerName)) {
+          setInsurers((prev) => [...prev, insurerName]);
+        }
+      } else {
+        dossier.select = undefined;
+        dossier.insurer = undefined;
+      }
+    }
+    return dossier;
+  }
+
+  function buildDossierFromForm(personId) {
+    const todayStr = TODAY.toISOString().slice(0, 10);
+    const nextDossierId = Math.max(0, ...dossiers.map((d) => d.id)) + 1;
+    return {
+      id: nextDossierId,
+      personId,
+      lastContact: todayStr,
+      ...dossierFieldsFromForm(),
+    };
+  }
+
+  function submitForm() {
+    if (!form.capital || isNaN(parseFloat(form.capital))) { setFormError("Le capital doit être un nombre."); return; }
+
+    if (editingDossierId) {
+      const fields = dossierFieldsFromForm();
+      setDossiers((prev) => prev.map((d) => (d.id === editingDossierId ? { ...d, ...fields } : d)));
+      const editedDossier = dossiers.find((d) => d.id === editingDossierId);
+      if (editedDossier) touchPerson(editedDossier.personId);
+      setShowForm(false);
+      showToast("Dossier mis à jour.");
+    } else if (addDossierFor) {
+      const dossier = buildDossierFromForm(addDossierFor);
+      setDossiers((prev) => [...prev, dossier]);
+      touchPerson(addDossierFor);
+      setShowForm(false);
+      const person = people.find((p) => p.id === addDossierFor);
+      showToast("Nouveau dossier " + form.pillar + " ajouté pour " + (person ? person.name : "le client") + ".");
+    } else {
+      if (!form.name.trim()) { setFormError("Le nom est obligatoire."); return; }
+      const nextPersonId = Math.max(0, ...people.map((p) => p.id)) + 1;
+      const newPerson = {
+        id: nextPersonId,
+        name: form.name.trim(),
+        city: form.city.trim(),
+        advisor: form.advisor,
+        phone: form.phone.trim(),
+        address: form.address.trim(),
+        genre: form.genre,
+        country: form.country.trim() || "Suisse",
+        birthDate: form.birthDate || "",
+        lastModified: TODAY.toISOString().slice(0, 10),
+        situationFamiliale: form.situationFamiliale,
+        revenuSource: form.revenuSource.trim(),
+        revenuAnnuel: form.revenuAnnuel ? Math.round(parseFloat(form.revenuAnnuel)) : 0,
+        logement: form.logement,
+        creditRestant: form.creditRestant ? Math.round(parseFloat(form.creditRestant)) : 0,
+        estimationBien: form.estimationBien ? Math.round(parseFloat(form.estimationBien)) : 0,
+        autresPlacements: form.autresPlacements.trim(),
+        documents: [],
+      };
+      const dossier = buildDossierFromForm(nextPersonId);
+      setPeople((prev) => [...prev, newPerson]);
+      setDossiers((prev) => [...prev, dossier]);
+      if (form.salaryFile) uploadDocument(nextPersonId, form.salaryFile);
+      setShowForm(false);
+      showToast(newPerson.name + " a été ajouté(e) à la liste des clients.");
+    }
+  }
+
+  function updateRate(key, value) {
+    const n = parseFloat(value);
+    setRates((prev) => ({ ...prev, [key]: isNaN(n) ? 0 : n }));
+  }
+
+  function personOf(dossier) {
+    return people.find((p) => p.id === dossier.personId) || {};
+  }
+
+  const dossiersJoined = dossiers.map((d) => ({ ...d, person: personOf(d) }));
+
+  const upcoming = dossiersJoined.filter((d) => d.dateFin && daysUntil(d.dateFin) <= 30 && daysUntil(d.dateFin) >= 0)
+    .sort((a, b) => daysUntil(a.dateFin) - daysUntil(b.dateFin));
+
+  const PILLARS = ["Tous", "2e pilier", "3e pilier A", "3e pilier B"];
+  const STATUSES = ["Tous", "Actif", "Suivi requis", "À recontacter", "Nouveau"];
+
+  const peopleWithDossiers = people.map((p) => {
+    const own = dossiers.filter((d) => d.personId === p.id);
+    const totalCapital = own.reduce((s, d) => s + d.capital, 0);
+    const pillarsHeld = [...new Set(own.map((d) => d.pillar))];
+    const withDateFin = own.filter((d) => d.dateFin);
+    const nearest = withDateFin.length
+      ? withDateFin.reduce((min, d) => (daysUntil(d.dateFin) < daysUntil(min.dateFin) ? d : min))
+      : null;
+    return { ...p, dossiers: own, totalCapital, pillarsHeld, nearestDeadline: nearest ? nearest.dateFin : null };
+  });
+
+  const selected = selectedId ? peopleWithDossiers.find((p) => p.id === selectedId) : null;
+
+  let filteredPeople = peopleWithDossiers.filter((p) =>
+    (p.name + " " + p.city).toLowerCase().includes(search.toLowerCase())
+  );
+  if (pillarFilter !== "Tous") filteredPeople = filteredPeople.filter((p) => p.pillarsHeld.includes(pillarFilter));
+  if (statusFilter !== "Tous") filteredPeople = filteredPeople.filter((p) => p.dossiers.some((d) => d.status === statusFilter));
+  if (advisorFilter !== "Tous") filteredPeople = filteredPeople.filter((p) => p.advisor === advisorFilter);
+
+  if (sortKey) {
+    filteredPeople = [...filteredPeople].sort((a, b) => {
+      let av = a[sortKey], bv = b[sortKey];
+      if (sortKey === "nearestDeadline") { av = av ? new Date(av) : new Date(8640000000000000); bv = bv ? new Date(bv) : new Date(8640000000000000); }
+      if (av < bv) return sortDir === "asc" ? -1 : 1;
+      if (av > bv) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }
+
+  function toggleSort(key) {
+    if (sortKey === key) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  }
+
+  const openDeals = deals.filter((d) => d.stage !== "Signé").length;
+
+  const PILLAR_GROUPS = ["2e pilier", "3e pilier A", "3e pilier B"];
+  const pillarBreakdown = PILLAR_GROUPS.map((p) => {
+    const count = dossiers.filter((d) => d.pillar === p).length;
+    const share = dossiers.length > 0 ? count / dossiers.length : 0;
+    return {
+      pillar: p,
+      projectedCount: Math.round(TOTAL_PORTFOLIO * share),
+      projectedCapital: Math.round(TOTAL_CAPITAL * share),
+      share,
+    };
+  });
+
+  const total2ePilierSample = dossiers.filter((d) => d.pillar === "2e pilier").reduce((s, d) => s + d.capital, 0);
+  const fundBreakdown = FUNDS.map((f) => {
+    const linked = dossiers.filter((d) => d.fund === f.id).map((d) => ({ ...d, person: personOf(d) }));
+    const sampleCapital = linked.reduce((s, d) => s + d.capital, 0);
+    const share = total2ePilierSample > 0 ? sampleCapital / total2ePilierSample : 0;
+    const projectedCapital = Math.round(pillarBreakdown[0].projectedCapital * share);
+    const rate = fundRates[f.id];
+    return {
+      ...f,
+      linked,
+      linkedCount: linked.length,
+      projectedCapital,
+      commissionAmount: Math.round(projectedCapital * (rate / 100)),
+      nextCommission: nextQuarterly(f.anchor),
+    };
+  }).sort((a, b) => a.nextCommission - b.nextCommission);
+  const fundsDueSoon = fundBreakdown.filter((f) => daysUntilDate(f.nextCommission) <= 30).length;
+
+  const PRODUCT_TYPES = ["Bancaire", "Assurance", "Fonds de placement"];
+  const total3ePilierSample = dossiers.filter((d) => d.pillar.startsWith("3e")).reduce((s, d) => s + d.capital, 0);
+  const productBreakdown = PRODUCT_TYPES.map((type) => {
+    const linked = dossiers.filter((d) => d.productType === type);
+    const sampleCapital = linked.reduce((s, d) => s + d.capital, 0);
+    const share = total3ePilierSample > 0 ? sampleCapital / total3ePilierSample : 0;
+    const projected3eCapital = pillarBreakdown[1].projectedCapital + pillarBreakdown[2].projectedCapital;
+    const projectedCapital = Math.round(projected3eCapital * share);
+    let rate = 0;
+    if (type === "Assurance") rate = rates.assurance;
+    if (type === "Fonds de placement") rate = rates.fonds;
+    return {
+      type,
+      linkedCount: linked.length,
+      projectedCapital,
+      commissionAmount: Math.round(projectedCapital * (rate / 100)),
+      recurring: type === "Fonds de placement",
+    };
+  });
+
+  const cityBreakdown = (() => {
+    const groups = {};
+    peopleWithDossiers.forEach((p) => {
+      const city = p.city || "Non renseignée";
+      if (!groups[city]) groups[city] = { city, count: 0, capital: 0 };
+      groups[city].count += 1;
+      groups[city].capital += p.totalCapital;
+    });
+    const totalCount = peopleWithDossiers.length || 1;
+    return Object.values(groups)
+      .map((g) => ({ ...g, share: g.count / totalCount }))
+      .sort((a, b) => b.count - a.count);
+  })();
+
+  const advisorBreakdown = ADVISORS.filter((a) => a !== "Tous").map((a) => {
+    const own = peopleWithDossiers.filter((p) => p.advisor === a);
+    const capital = own.reduce((s, p) => s + p.totalCapital, 0);
+    return { advisor: a, count: own.length, capital, share: peopleWithDossiers.length ? own.length / peopleWithDossiers.length : 0 };
+  });
+
+  const statusBreakdown = STATUSES.filter((s) => s !== "Tous").map((s) => {
+    const own = dossiers.filter((d) => d.status === s);
+    return { status: s, count: own.length, share: dossiers.length ? own.length / dossiers.length : 0 };
+  });
+
+  const genreBreakdown = ["Homme", "Femme"].map((g) => {
+    const own = peopleWithDossiers.filter((p) => p.genre === g);
+    return { genre: g, count: own.length, share: peopleWithDossiers.length ? own.length / peopleWithDossiers.length : 0 };
+  });
+
+  const avgCapitalPerClient = peopleWithDossiers.length
+    ? Math.round(peopleWithDossiers.reduce((s, p) => s + p.totalCapital, 0) / peopleWithDossiers.length)
+    : 0;
+
+  function moveStage(dealId, direction) {
+    setDeals((prev) =>
+      prev.map((d) => {
+        if (d.id !== dealId) return d;
+        const idx = PIPELINE_STAGES.indexOf(d.stage);
+        const next = idx + direction;
+        if (next < 0 || next >= PIPELINE_STAGES.length) return d;
+        return { ...d, stage: PIPELINE_STAGES[next] };
+      })
+    );
+  }
+
+  function updateDealRdv(dealId, value) {
+    setDeals((prev) => prev.map((d) => (d.id === dealId ? { ...d, rdvDate: value } : d)));
+  }
+
+  function removeDeal(dealId) {
+    setDeals((prev) => prev.filter((d) => d.id !== dealId));
+    showToast("Prospect retiré du pipeline.");
+  }
+
+  const [showProspectForm, setShowProspectForm] = useState(false);
+  const [prospectForm, setProspectForm] = useState({ name: "", city: "", phone: "", pillar: "2e pilier", estCapital: "", advisor: "Benoit", stage: "Prospect" });
+
+  function updateProspectForm(key, value) {
+    setProspectForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function submitProspect() {
+    if (!prospectForm.name.trim()) return;
+    const nextId = Math.max(100, ...deals.map((d) => d.id)) + 1;
+    const newDeal = {
+      id: nextId,
+      name: prospectForm.name.trim(),
+      city: prospectForm.city.trim(),
+      phone: prospectForm.phone.trim(),
+      pillar: prospectForm.pillar,
+      estCapital: prospectForm.estCapital ? Math.round(parseFloat(prospectForm.estCapital)) : 0,
+      stage: prospectForm.stage,
+      advisor: prospectForm.advisor,
+      rdvDate: "",
+    };
+    setDeals((prev) => [...prev, newDeal]);
+    setShowProspectForm(false);
+    setProspectForm({ name: "", city: "", phone: "", pillar: "2e pilier", estCapital: "", advisor: "Benoit", stage: "Prospect" });
+    showToast(newDeal.name + " ajouté au pipeline.");
+  }
+
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2600);
+  }
+
+  return (
+    <div className="app">
+      <div className="sidebar">
+        <div className="brand">
+          Rivage Prévoyance
+          <span>Cabinet de conseil</span>
+        </div>
+        <div className={"nav-item" + (view === "dashboard" ? " active" : "")} onClick={() => setView("dashboard")}>
+          <LayoutDashboard size={16} /> Tableau de bord
+        </div>
+        <div className={"nav-item" + (view === "clients" ? " active" : "")} onClick={() => { setView("clients"); setPillarFilter("Tous"); }}>
+          <Users size={16} /> Clients
+        </div>
+        {view === "clients" && (
+          <div className="sub-nav">
+            {PILLARS.map((p) => (
+              <div
+                key={p}
+                className={"sub-nav-item" + (pillarFilter === p ? " active" : "")}
+                onClick={() => setPillarFilter(p)}
+              >
+                {p === "Tous" ? "Tous les clients" : p}
+              </div>
+            ))}
+          </div>
+        )}
+        <div className={"nav-item" + (view === "pipeline" ? " active" : "")} onClick={() => setView("pipeline")}>
+          <GitBranch size={16} /> Pipeline
+        </div>
+        <div className={"nav-item" + (view === "analytics" ? " active" : "")} onClick={() => setView("analytics")}>
+          <BarChart size={16} /> Analytique
+        </div>
+        <div className="nav-spacer" />
+        <div className="sidebar-foot">
+          {TOTAL_PORTFOLIO.toLocaleString("fr-CH")} clients au portefeuille. Échantillon de démonstration ci-contre.
+        </div>
+      </div>
+
+      <div className="main" style={{ position: "relative" }}>
+        <div className="topbar">
+          <h1>
+            {view === "dashboard" && "Tableau de bord"}
+            {view === "clients" && "Clients"}
+            {view === "pipeline" && "Pipeline commercial"}
+            {view === "analytics" && "Analytique"}
+          </h1>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            {view === "clients" && (
+              <div className="search-box">
+                <Search size={14} color="var(--ink-soft)" />
+                <input placeholder="Rechercher un nom, une ville…" value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
+            )}
+            {view !== "analytics" && (
+              <button className="btn-primary" onClick={view === "pipeline" ? () => setShowProspectForm(true) : openNewClientForm}>
+                {view === "pipeline" ? "+ Nouveau prospect" : "+ Nouveau client"}
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="content">
+          {view === "dashboard" && (
+            <>
+              <div className="kpi-grid">
+                <div className="kpi"><div className="label">Clients actifs</div><div className="value">{TOTAL_PORTFOLIO.toLocaleString("fr-CH")}</div></div>
+                <div className="kpi"><div className="label">Capital sous suivi</div><div className="value">{formatCHF(TOTAL_CAPITAL)}</div></div>
+                <div className="kpi"><div className="label">Échéances à 30 jours</div><div className="value accent">{upcoming.length}</div></div>
+                <div className="kpi"><div className="label">Dossiers en pipeline</div><div className="value">{openDeals}</div></div>
+                <div className="kpi"><div className="label">Commissions fonds (30j)</div><div className="value accent">{fundsDueSoon}</div></div>
+              </div>
+
+              <div className="panel">
+                <h2>Répartition par pilier</h2>
+                {pillarBreakdown.map((row) => (
+                  <div className="pillar-row" key={row.pillar}>
+                    <div className="pillar-row-head">
+                      <span>{row.pillar}</span>
+                      <span className="num-right">
+                        {row.projectedCount.toLocaleString("fr-CH")} clients · {formatCHF(row.projectedCapital)}
+                      </span>
+                    </div>
+                    <div className="pillar-bar-track">
+                      <div className="pillar-bar-fill" style={{ width: (row.share * 100) + "%" }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="panel-row" style={{ marginTop: "22px" }}>
+                <div className="panel">
+                  <h2>Prochaines échéances (fin de contrat, 3e pilier)</h2>
+                  {upcoming.length === 0 && <div className="list-row muted">Aucune échéance dans les 30 prochains jours.</div>}
+                  {upcoming.map((d) => (
+                    <div className="list-row" key={d.id} style={{ cursor: "pointer" }} onClick={() => setSelectedId(d.person.id)}>
+                      <div>{d.person.name}<div className="muted">{d.pillar} — {d.person.city}</div></div>
+                      <div className="num-right">{formatDate(d.dateFin)}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="panel">
+                  <h2>Dossiers récemment suivis</h2>
+                  {dossiersJoined.slice().sort((a, b) => new Date(b.lastContact) - new Date(a.lastContact)).slice(0, 6).map((d) => (
+                    <div className="list-row" key={d.id} style={{ cursor: "pointer" }} onClick={() => setSelectedId(d.person.id)}>
+                      <div>{d.person.name}<div className="muted">{d.pillar} — {d.person.city}</div></div>
+                      <div className="num-right">{formatDate(d.lastContact)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="panel" style={{ marginTop: "22px" }}>
+                <h2 style={{ padding: "14px 18px" }}>Commissions trimestrielles par fondation</h2>
+                <div className="table-note" style={{ padding: "12px 18px 0 18px", margin: 0 }}>
+                  Chaque fonds a son propre taux de commission récurrente, éditable ci-dessous. Le taux de commission à la signature se règle individuellement dans la fiche de chaque client (2e pilier).
+                </div>
+                {fundBreakdown.map((f) => {
+                  const d = daysUntilDate(f.nextCommission);
+                  const isOpen = !!expandedFunds[f.id];
+                  return (
+                    <div key={f.id}>
+                      <div className="list-row">
+                        <div style={{ cursor: "pointer" }} onClick={() => toggleFundExpand(f.id)}>
+                          {f.name}
+                          <div className="muted">{formatCHF(f.projectedCapital)} · {f.linkedCount} client{f.linkedCount > 1 ? "s" : ""} (échantillon) · {isOpen ? "masquer le détail ▲" : "voir le détail par client ▼"}</div>
+                        </div>
+                        <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: "12px" }}>
+                          <div className="rate-input" onClick={(e) => e.stopPropagation()}>
+                            <input type="number" step="0.05" min="0" value={fundRates[f.id]} onChange={(e) => updateFundRate(f.id, e.target.value)} />
+                            <span>%</span>
+                          </div>
+                          <div>
+                            <div className="num-right" style={{ color: d <= 30 ? "var(--amber)" : "var(--ink-soft)" }}>
+                              {f.nextCommission.toLocaleDateString("fr-CH", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                            </div>
+                            <div className="num-right" style={{ color: "var(--accent)", fontSize: "12px", marginTop: "2px" }}>
+                              ≈ {formatCHF(f.commissionAmount)} / trim.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      {isOpen && (
+                        <div style={{ background: "var(--bg)", padding: "4px 18px 10px 18px" }}>
+                          {f.linked.map((dossier) => (
+                            <div className="list-row" key={dossier.id} style={{ padding: "8px 0", border: "none", cursor: "pointer" }} onClick={() => setSelectedId(dossier.person.id)}>
+                              <div style={{ fontSize: "12.5px" }}>
+                                <span className="advisor-dot" style={{ background: ADVISOR_COLOR[dossier.person.advisor] }}></span>
+                                {dossier.person.name}
+                              </div>
+                              <div style={{ textAlign: "right", fontSize: "12px" }}>
+                                <span className="num-right">{formatCHF(dossier.capital)}</span>
+                                <span className="num-right" style={{ color: "var(--accent)", marginLeft: "10px" }}>
+                                  ≈ {formatCHF(Math.round(dossier.capital * (fundRates[f.id] / 100)))} / trim.
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="panel" style={{ marginTop: "22px" }}>
+                <h2 style={{ border: "none", padding: "14px 18px 4px 18px" }}>Commissions 3e pilier (estimation)</h2>
+                <div className="table-note" style={{ padding: "0 18px 12px 18px", margin: 0 }}>
+                  Bancaire : pas de commission. Assurance : commission unique à la souscription. Fonds de placement : commission de gestion annuelle (TER).
+                </div>
+                {productBreakdown.map((p) => (
+                  <div className="list-row" key={p.type}>
+                    <div>
+                      {p.type}
+                      <div className="muted">{formatCHF(p.projectedCapital)} · {p.linkedCount} client{p.linkedCount > 1 ? "s" : ""} (échantillon)</div>
+                    </div>
+                    <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: "10px" }}>
+                      {p.type !== "Bancaire" && (
+                        <div className="rate-input">
+                          <input
+                            type="number" step="0.1" min="0"
+                            value={p.type === "Assurance" ? rates.assurance : rates.fonds}
+                            onChange={(e) => updateRate(p.type === "Assurance" ? "assurance" : "fonds", e.target.value)}
+                          />
+                          <span>%</span>
+                        </div>
+                      )}
+                      <div className="num-right" style={{ color: p.type === "Bancaire" ? "var(--ink-soft)" : "var(--accent)", minWidth: "110px" }}>
+                        {p.type === "Bancaire" ? "—" : "≈ " + formatCHF(p.commissionAmount) + (p.recurring ? " / an" : "")}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {view === "clients" && (
+            <>
+              <div className="advisor-legend">
+                <span><span className="advisor-dot" style={{ background: ADVISOR_COLOR["Benoit"] }}></span>Benoit</span>
+                <span><span className="advisor-dot" style={{ background: ADVISOR_COLOR["Thaiana"] }}></span>Thaiana</span>
+              </div>
+              <div className="filter-bar">
+                <select className="filter-select" value={pillarFilter} onChange={(e) => setPillarFilter(e.target.value)}>
+                  {PILLARS.map((p) => <option key={p} value={p}>{p === "Tous" ? "Tous les piliers" : p}</option>)}
+                </select>
+                <select className="filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  {STATUSES.map((s) => <option key={s} value={s}>{s === "Tous" ? "Tous les statuts" : s}</option>)}
+                </select>
+                <select className="filter-select" value={advisorFilter} onChange={(e) => setAdvisorFilter(e.target.value)}>
+                  {ADVISORS.map((a) => <option key={a} value={a}>{a === "Tous" ? "Tous les conseillers" : a}</option>)}
+                </select>
+                {(pillarFilter !== "Tous" || statusFilter !== "Tous" || advisorFilter !== "Tous") && (
+                  <button className="filter-clear" onClick={() => { setPillarFilter("Tous"); setStatusFilter("Tous"); setAdvisorFilter("Tous"); }}>
+                    Réinitialiser
+                  </button>
+                )}
+              </div>
+              <div className="table-note">
+                {filteredPeople.length} client{filteredPeople.length > 1 ? "s" : ""} affiché{filteredPeople.length > 1 ? "s" : ""} sur un échantillon de démonstration ({TOTAL_PORTFOLIO.toLocaleString("fr-CH")} au total dans le portefeuille réel). Un client peut avoir plusieurs dossiers (2e et 3e pilier).
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th className="sortable" onClick={() => toggleSort("name")}>Nom{sortKey === "name" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}</th>
+                    <th>Ville</th>
+                    <th>Dossiers</th>
+                    <th className="sortable" onClick={() => toggleSort("totalCapital")}>Capital total{sortKey === "totalCapital" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}</th>
+                    <th>Conseiller</th>
+                    <th className="sortable" onClick={() => toggleSort("nearestDeadline")}>Fin de contrat (3e pilier){sortKey === "nearestDeadline" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}</th>
+                    <th className="sortable" onClick={() => toggleSort("lastModified")}>Dernière modif.{sortKey === "lastModified" ? (sortDir === "asc" ? " ↑" : " ↓") : ""}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPeople.map((p) => (
+                    <tr key={p.id} onClick={() => setSelectedId(p.id)} style={{ background: ADVISOR_COLOR[p.advisor] + "14" }}>
+                      <td data-label="Nom">
+                        <span className="advisor-dot" style={{ background: ADVISOR_COLOR[p.advisor] }}></span>
+                        {p.name}
+                      </td>
+                      <td data-label="Ville">{p.city}</td>
+                      <td data-label="Dossiers">
+                        {p.dossiers.map((d) => (
+                          <span className="pillar-tag" key={d.id} style={{ marginRight: "4px", marginBottom: "3px", display: "inline-block" }}>
+                            {d.pillar}
+                            {d.profile && <span style={{ marginLeft: "4px" }}>· {d.profile}</span>}
+                            {d.select && <span style={{ marginLeft: "4px" }}>· {d.select}</span>}
+                            <span className={"badge " + STATUS_CLASS[d.status]} style={{ marginLeft: "5px", padding: "1px 5px" }}>{d.status}</span>
+                          </span>
+                        ))}
+                      </td>
+                      <td data-label="Capital total" className="cell-num">{formatCHF(p.totalCapital)}</td>
+                      <td data-label="Conseiller">{p.advisor}</td>
+                      <td data-label="Échéance" className="cell-num">{p.nearestDeadline ? formatDate(p.nearestDeadline) : "—"}</td>
+                      <td data-label="Modifié" className="cell-num">{p.lastModified ? formatDate(p.lastModified) : "—"}</td>
+                    </tr>
+                  ))}
+                  {filteredPeople.length === 0 && (
+                    <tr><td colSpan="7" style={{ textAlign: "center", color: "var(--ink-soft)", padding: "20px" }}>Aucun client ne correspond à ces filtres.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {view === "pipeline" && (
+            <div className="pipeline">
+              {PIPELINE_STAGES.map((stage) => {
+                const stageDeals = deals.filter((d) => d.stage === stage);
+                return (
+                  <div className="stage-col" key={stage}>
+                    <div className="stage-head"><span>{stage}</span><span>{stageDeals.length}</span></div>
+                    {stageDeals.map((d) => {
+                      const idx = PIPELINE_STAGES.indexOf(d.stage);
+                      const ics = icsDataUrl(d);
+                      return (
+                        <div className="stage-card" key={d.id} style={{ borderLeft: "3px solid " + ADVISOR_COLOR[d.advisor], background: ADVISOR_COLOR[d.advisor] + "0D" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                            <div className="name">{d.name}</div>
+                            <button className="filter-clear" style={{ padding: "0 0 0 6px" }} onClick={() => removeDeal(d.id)}>✕</button>
+                          </div>
+                          <div className="muted">{d.pillar} — {d.city} · {d.advisor}</div>
+                          <div className="cap">{formatCHF(d.estCapital)}</div>
+                          <div className="rdv-row">
+                            <input
+                              type="datetime-local"
+                              className="rdv-input"
+                              value={d.rdvDate || ""}
+                              onChange={(e) => updateDealRdv(d.id, e.target.value)}
+                            />
+                          </div>
+                          {ics && (
+                            <a href={ics} download={"RDV-" + d.name.replace(/\s+/g, "-") + ".ics"} className="ics-link">
+                              + Ajouter à l'agenda
+                            </a>
+                          )}
+                          <div className="stage-nav">
+                            <button disabled={idx === 0} onClick={() => moveStage(d.id, -1)}><ChevronLeft size={13} /></button>
+                            <button disabled={idx === PIPELINE_STAGES.length - 1} onClick={() => moveStage(d.id, 1)}><ChevronRight size={13} /></button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {stageDeals.length === 0 && <div className="muted" style={{ padding: "4px" }}>—</div>}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {view === "analytics" && (
+            <>
+              <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+                <div className="kpi"><div className="label">Villes couvertes</div><div className="value">{cityBreakdown.length}</div></div>
+                <div className="kpi"><div className="label">Capital moyen / client</div><div className="value">{formatCHF(avgCapitalPerClient)}</div></div>
+                <div className="kpi"><div className="label">Clients échantillon</div><div className="value">{peopleWithDossiers.length}</div></div>
+              </div>
+
+              <div className="panel">
+                <h2>Répartition par ville</h2>
+                {cityBreakdown.map((row) => (
+                  <div className="pillar-row" key={row.city}>
+                    <div className="pillar-row-head">
+                      <span>{row.city}</span>
+                      <span className="num-right">{row.count} client{row.count > 1 ? "s" : ""} ({(row.share * 100).toFixed(0)}%) · {formatCHF(row.capital)}</span>
+                    </div>
+                    <div className="pillar-bar-track">
+                      <div className="pillar-bar-fill" style={{ width: (row.share * 100) + "%" }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="panel-row" style={{ marginTop: "22px" }}>
+                <div className="panel">
+                  <h2>Répartition par conseiller</h2>
+                  {advisorBreakdown.map((row) => (
+                    <div className="pillar-row" key={row.advisor}>
+                      <div className="pillar-row-head">
+                        <span><span className="advisor-dot" style={{ background: ADVISOR_COLOR[row.advisor] }}></span>{row.advisor}</span>
+                        <span className="num-right">{row.count} clients ({(row.share * 100).toFixed(0)}%) · {formatCHF(row.capital)}</span>
+                      </div>
+                      <div className="pillar-bar-track">
+                        <div className="pillar-bar-fill" style={{ width: (row.share * 100) + "%", background: ADVISOR_COLOR[row.advisor] }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="panel">
+                  <h2>Répartition par genre</h2>
+                  {genreBreakdown.map((row) => (
+                    <div className="pillar-row" key={row.genre}>
+                      <div className="pillar-row-head">
+                        <span>{row.genre}</span>
+                        <span className="num-right">{row.count} clients ({(row.share * 100).toFixed(0)}%)</span>
+                      </div>
+                      <div className="pillar-bar-track">
+                        <div className="pillar-bar-fill" style={{ width: (row.share * 100) + "%" }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="panel" style={{ marginTop: "22px" }}>
+                <h2>Répartition des dossiers par statut</h2>
+                {statusBreakdown.map((row) => (
+                  <div className="pillar-row" key={row.status}>
+                    <div className="pillar-row-head">
+                      <span><span className={"badge " + STATUS_CLASS[row.status]}>{row.status}</span></span>
+                      <span className="num-right">{row.count} dossier{row.count > 1 ? "s" : ""} ({(row.share * 100).toFixed(0)}%)</span>
+                    </div>
+                    <div className="pillar-bar-track">
+                      <div className="pillar-bar-fill" style={{ width: (row.share * 100) + "%" }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        {showProspectForm && (
+          <div className="form-overlay" onClick={() => setShowProspectForm(false)}>
+            <div className="form-panel" onClick={(e) => e.stopPropagation()}>
+              <div className="form-head">
+                <h2>Nouveau prospect</h2>
+                <button className="close-btn" onClick={() => setShowProspectForm(false)}><XIcon size={18} /></button>
+              </div>
+              <div className="form-body">
+                <div className="form-row">
+                  <label>Nom *</label>
+                  <input type="text" value={prospectForm.name} onChange={(e) => updateProspectForm("name", e.target.value)} placeholder="Prénom Nom" />
+                </div>
+                <div className="form-row-split">
+                  <div className="form-row">
+                    <label>Ville</label>
+                    <input type="text" value={prospectForm.city} onChange={(e) => updateProspectForm("city", e.target.value)} placeholder="Genève" />
+                  </div>
+                  <div className="form-row">
+                    <label>Téléphone</label>
+                    <input type="text" value={prospectForm.phone} onChange={(e) => updateProspectForm("phone", e.target.value)} placeholder="+41 79 000 00 00" />
+                  </div>
+                </div>
+                <div className="form-row-split">
+                  <div className="form-row">
+                    <label>Pilier pressenti</label>
+                    <select value={prospectForm.pillar} onChange={(e) => updateProspectForm("pillar", e.target.value)}>
+                      <option value="2e pilier">2e pilier</option>
+                      <option value="3e pilier A">3e pilier A</option>
+                      <option value="3e pilier B">3e pilier B</option>
+                    </select>
+                  </div>
+                  <div className="form-row">
+                    <label>Capital estimé (CHF)</label>
+                    <input type="number" value={prospectForm.estCapital} onChange={(e) => updateProspectForm("estCapital", e.target.value)} placeholder="50000" />
+                  </div>
+                </div>
+                <div className="form-row-split">
+                  <div className="form-row">
+                    <label>Conseiller</label>
+                    <select value={prospectForm.advisor} onChange={(e) => updateProspectForm("advisor", e.target.value)}>
+                      <option value="Benoit">Benoit</option>
+                      <option value="Thaiana">Thaiana</option>
+                    </select>
+                  </div>
+                  <div className="form-row">
+                    <label>Étape</label>
+                    <select value={prospectForm.stage} onChange={(e) => updateProspectForm("stage", e.target.value)}>
+                      {PIPELINE_STAGES.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <div className="form-foot">
+                <button className="btn-secondary" onClick={() => setShowProspectForm(false)}>Annuler</button>
+                <button className="btn-primary" onClick={submitProspect}>Enregistrer</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selected && (
+          <div className="detail-overlay" onClick={() => setSelectedId(null)}>
+            <div className="detail-panel" onClick={(e) => e.stopPropagation()}>
+              <div className="detail-head">
+                <div>
+                  <h2>{selected.name}</h2>
+                  <div className="muted">{selected.city}</div>
+                </div>
+                <button className="close-btn" onClick={() => setSelectedId(null)}><XIcon size={18} /></button>
+              </div>
+              <div style={{ padding: "14px 22px", borderBottom: "1px solid var(--border)" }}>
+                <button className="btn-secondary" style={{ width: "100%" }} onClick={() => openAddDossierForm(selected.id)}>
+                  + Ajouter un dossier (2e ou 3e pilier)
+                </button>
+              </div>
+              <div className="detail-section">
+                <h3>Coordonnées</h3>
+                <div className="kv"><span>Genre</span><span>{selected.genre}</span></div>
+                <div className="kv">
+                  <span>Conseiller</span>
+                  <span><span className="advisor-dot" style={{ background: ADVISOR_COLOR[selected.advisor] }}></span>{selected.advisor}</span>
+                </div>
+                <div className="kv"><span>Téléphone</span><span className="num-right">{selected.phone}</span></div>
+                <div className="kv" style={{ alignItems: "flex-start" }}><span>Adresse</span><span className="num-right" style={{ textAlign: "right", maxWidth: "220px" }}>{selected.address}</span></div>
+                <div className="kv"><span>Pays</span><span className="num-right">{selected.country}</span></div>
+              </div>
+
+              <div className="detail-section">
+                <h3>Profil financier & personnel</h3>
+                <div className="kv"><span>Date de naissance</span><span className="num-right">{selected.birthDate ? formatDate(selected.birthDate) : "—"}</span></div>
+                <div className="kv"><span>Âge</span><span className="num-right">{selected.birthDate ? calcAge(selected.birthDate) + " ans" : "—"}</span></div>
+                <div className="kv">
+                  <span>Retraite (65 ans)</span>
+                  <span className="num-right">
+                    {selected.birthDate
+                      ? retirementDate(selected.birthDate).toLocaleDateString("fr-CH", { day: "2-digit", month: "2-digit", year: "numeric" }) +
+                        (yearsToRetirement(selected.birthDate) >= 0 ? " (dans " + yearsToRetirement(selected.birthDate).toFixed(1) + " ans)" : " (atteinte)")
+                      : "—"}
+                  </span>
+                </div>
+                <div className="kv"><span>Situation familiale</span><span>{selected.situationFamiliale || "—"}</span></div>
+                <div className="kv"><span>Source de revenu</span><span>{selected.revenuSource || "—"}</span></div>
+                <div className="kv"><span>Revenu annuel</span><span className="num-right">{selected.revenuAnnuel ? formatCHF(selected.revenuAnnuel) : "—"}</span></div>
+                <div className="kv"><span>Logement</span><span>{selected.logement || "—"}</span></div>
+                {selected.logement === "Propriétaire" && (
+                  <>
+                    <div className="kv"><span>Crédit restant à rembourser</span><span className="num-right">{formatCHF(selected.creditRestant || 0)}</span></div>
+                    <div className="kv"><span>Estimation du bien</span><span className="num-right">{formatCHF(selected.estimationBien || 0)}</span></div>
+                  </>
+                )}
+                <div className="kv" style={{ alignItems: "flex-start" }}>
+                  <span>Autres placements</span>
+                  <span className="num-right" style={{ textAlign: "right", maxWidth: "220px" }}>{selected.autresPlacements || "Aucun connu"}</span>
+                </div>
+              </div>
+
+              <div className="detail-section">
+                <h3>Patrimoine & simulations</h3>
+                <div className="kv"><span>Capital total actuel (tous dossiers)</span><span className="num-right">{formatCHF(selected.totalCapital)}</span></div>
+                {selected.birthDate ? (() => {
+                  const years = yearsToRetirement(selected.birthDate);
+                  const yearsPositive = Math.max(0, years);
+                  const projected = Math.round(selected.totalCapital * Math.pow(1 + simRate / 100, yearsPositive));
+                  return (
+                    <>
+                      <div className="kv"><span>Années avant la retraite (65 ans)</span><span className="num-right">{years >= 0 ? years.toFixed(1) : "atteinte"}</span></div>
+                      <div className="kv">
+                        <span>Taux de croissance annuel supposé</span>
+                        <span className="rate-input">
+                          <input type="number" step="0.1" min="0" value={simRate} onChange={(e) => setSimRate(parseFloat(e.target.value) || 0)} />
+                          <span>%</span>
+                        </span>
+                      </div>
+                      <div className="kv">
+                        <span>Capital projeté à la retraite</span>
+                        <span className="num-right" style={{ color: "var(--accent)", fontWeight: 500 }}>{formatCHF(projected)}</span>
+                      </div>
+                      <button
+                        className="btn-secondary"
+                        style={{ width: "100%", marginTop: "8px" }}
+                        onClick={() => saveSimulation(selected.id, selected.totalCapital, simRate, yearsPositive, projected)}
+                      >
+                        Enregistrer cette simulation
+                      </button>
+                    </>
+                  );
+                })() : (
+                  <div className="muted" style={{ fontSize: "12.5px" }}>Renseignez la date de naissance du client pour activer les simulations.</div>
+                )}
+
+                {(selected.simulations || []).length > 0 && (
+                  <div style={{ marginTop: "14px" }}>
+                    <div className="muted" style={{ fontSize: "12px", marginBottom: "6px" }}>Historique des simulations</div>
+                    {(selected.simulations || []).slice().reverse().map((sim, i) => {
+                      const realIndex = (selected.simulations.length - 1) - i;
+                      return (
+                        <div className="list-row" key={realIndex} style={{ padding: "8px 0" }}>
+                          <div style={{ fontSize: "12px" }}>
+                            {formatDate(sim.date)} — {formatCHF(sim.capitalActuel)} à {sim.rate}%, {sim.years.toFixed(1)} ans
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span className="num-right" style={{ fontSize: "12px", color: "var(--accent)" }}>{formatCHF(sim.projected)}</span>
+                            <button className="filter-clear" onClick={() => removeSimulation(selected.id, realIndex)}>✕</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="detail-section">
+                <h3>Documents</h3>
+                {(selected.documents || []).length === 0 && (
+                  <div className="muted" style={{ fontSize: "12.5px", marginBottom: "10px" }}>Aucun document. Ajoutez par exemple un certificat de salaire.</div>
+                )}
+                {(selected.documents || []).map((doc, i) => (
+                  <div className="list-row" key={i} style={{ padding: "8px 0" }}>
+                    <a href={doc.dataUrl} download={doc.name} style={{ fontSize: "13px", color: "var(--accent)" }}>{doc.name}</a>
+                    <button className="filter-clear" onClick={() => removeDocument(selected.id, i)}>Retirer</button>
+                  </div>
+                ))}
+                <label className="btn-secondary" style={{ display: "inline-block", marginTop: "8px", cursor: "pointer", fontSize: "12.5px", padding: "8px 14px" }}>
+                  + Ajouter un document
+                  <input type="file" style={{ display: "none" }} onChange={(e) => { uploadDocument(selected.id, e.target.files[0]); e.target.value = ""; }} />
+                </label>
+              </div>
+
+              {selected.dossiers.map((dossier) => (
+                <div key={dossier.id} className="dossier-block">
+                  <div className="dossier-block-head">
+                    <span>
+                      <span className="pillar-tag">{dossier.pillar}</span>
+                      <span className={"badge " + STATUS_CLASS[dossier.status]} style={{ marginLeft: "6px" }}>{dossier.status}</span>
+                    </span>
+                    <button className="filter-clear" onClick={() => openEditDossierForm(dossier)}>Modifier</button>
+                  </div>
+                  <div className="detail-section">
+                    <div className="kv"><span>Capital</span><span className="num-right">{formatCHF(dossier.capital)}</span></div>
+                    {dossier.pillar === "2e pilier" ? (
+                      <div className="kv"><span>Date de signature</span><span className="num-right">{formatDate(dossier.dateSignature)}</span></div>
+                    ) : (
+                      <>
+                        <div className="kv"><span>Date de début</span><span className="num-right">{formatDate(dossier.dateDebut)}</span></div>
+                        <div className="kv"><span>Date de fin</span><span className="num-right">{formatDate(dossier.dateFin)}</span></div>
+                        <div className="kv"><span>Montant de la prime ({dossier.primeFrequency || "Annuelle"})</span><span className="num-right">{formatCHF(dossier.primeAmount || 0)}</span></div>
+                      </>
+                    )}
+                    <div className="kv"><span>Dernier contact</span><span className="num-right">{formatDate(dossier.lastContact)}</span></div>
+                    {dossier.pillar === "2e pilier" && (
+                      <div className="kv"><span>Profil de risque</span><span>{dossier.profile || "—"}</span></div>
+                    )}
+                  </div>
+                  {dossier.pillar !== "2e pilier" && (() => {
+                    const commission = computeCommission(dossier, rates);
+                    if (!commission) return null;
+                    return (
+                      <div className="detail-section">
+                        <h3>Commission</h3>
+                        <div className="kv"><span>Type de produit</span><span>{commission.type}</span></div>
+                        {dossier.insurer && (
+                          <div className="kv"><span>Assurance</span><span>{dossier.insurer}</span></div>
+                        )}
+                        {dossier.select && (
+                          <div className="kv"><span>Garantie</span><span>{dossier.select}</span></div>
+                        )}
+                        <div className="kv">
+                          <span>Montant estimé</span>
+                          <span className="num-right" style={{ color: commission.amount > 0 ? "var(--accent)" : "var(--ink-soft)" }}>
+                            {commission.amount > 0 ? formatCHF(commission.amount) : "—"}
+                          </span>
+                        </div>
+                        <div className="muted" style={{ fontSize: "12px", marginTop: "6px" }}>{commission.note}</div>
+                      </div>
+                    );
+                  })()}
+                  {dossier.pillar === "2e pilier" && dossier.fund && (() => {
+                    const fundInfo = FUNDS.find((f) => f.id === dossier.fund);
+                    const sigRate = dossier.signatureRate != null ? dossier.signatureRate : 3;
+                    const recRate = fundRates[dossier.fund];
+                    const signatureAmount = Math.round(dossier.capital * (sigRate / 100));
+                    const recurringAmount = Math.round(dossier.capital * (recRate / 100));
+                    return (
+                      <div className="detail-section">
+                        <h3>Commission</h3>
+                        <div className="kv"><span>Fondation</span><span>{fundInfo ? fundInfo.name : "—"}</span></div>
+                        <div className="kv">
+                          <span>Taux signature (propre à ce client)</span>
+                          <span className="rate-input" onClick={(e) => e.stopPropagation()}>
+                            <input type="number" step="0.1" min="0" value={sigRate} onChange={(e) => updateDossierField(dossier.id, "signatureRate", e.target.value)} />
+                            <span>%</span>
+                          </span>
+                        </div>
+                        <div className="kv">
+                          <span>Commission signature (unique)</span>
+                          <span className="num-right" style={{ color: signatureAmount > 0 ? "var(--accent)" : "var(--ink-soft)" }}>
+                            {signatureAmount > 0 ? formatCHF(signatureAmount) : "— (0%)"}
+                          </span>
+                        </div>
+                        <div className="kv">
+                          <span>Commission récurrente ({fundInfo ? fundInfo.name : ""} à {recRate}% / 3 mois)</span>
+                          <span className="num-right" style={{ color: "var(--accent)" }}>{formatCHF(recurringAmount)}</span>
+                        </div>
+                        <div className="muted" style={{ fontSize: "12px", marginTop: "6px" }}>Le taux de signature se règle par client (peut être 0% pour certains dossiers). Le taux récurrent est celui de la fondation {fundInfo ? fundInfo.name : ""}, réglable dans le tableau de bord.</div>
+                      </div>
+                    );
+                  })()}
+                  <div className="detail-section">
+                    <h3>Historique</h3>
+                    {(HISTORY[dossier.id] || DEFAULT_HISTORY).map((h, i) => <div className="hist-item" key={i}>{h}</div>)}
+                  </div>
+                </div>
+              ))}
+
+              <div className="detail-section">
+                <h3>Notes</h3>
+                <textarea
+                  className="notes-textarea"
+                  value={selected.notes || ""}
+                  onChange={(e) => updateNotes(selected.id, e.target.value)}
+                  placeholder="Notes libres sur ce client (contexte, préférences, points à suivre...)"
+                  rows={4}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showForm && (
+          <div className="form-overlay" onClick={() => setShowForm(false)}>
+            <div className="form-panel" onClick={(e) => e.stopPropagation()}>
+              <div className="form-head">
+                <h2>{editingDossierId ? "Modifier le dossier" : addDossierFor ? "Nouveau dossier" : "Nouveau client"}</h2>
+                <button className="close-btn" onClick={() => setShowForm(false)}><XIcon size={18} /></button>
+              </div>
+              <div className="form-body">
+                {addDossierFor && (() => {
+                  const person = people.find((p) => p.id === addDossierFor);
+                  return (
+                    <div className="table-note" style={{ margin: 0 }}>
+                      {editingDossierId ? "Modification du dossier de " : "Ajout d'un dossier pour "}
+                      <strong>{person ? person.name : ""}</strong>.
+                    </div>
+                  );
+                })()}
+                {!addDossierFor && (
+                  <>
+                    <div className="form-row">
+                      <label>Nom complet *</label>
+                      <input type="text" value={form.name} onChange={(e) => updateForm("name", e.target.value)} placeholder="Prénom Nom" />
+                    </div>
+                    <div className="form-row-split">
+                      <div className="form-row">
+                        <label>Ville</label>
+                        <input type="text" value={form.city} onChange={(e) => updateForm("city", e.target.value)} placeholder="Genève" />
+                      </div>
+                      <div className="form-row">
+                        <label>Genre</label>
+                        <select value={form.genre} onChange={(e) => updateForm("genre", e.target.value)}>
+                          <option value="Homme">Homme</option>
+                          <option value="Femme">Femme</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-row-split">
+                      <div className="form-row">
+                        <label>Téléphone</label>
+                        <input type="text" value={form.phone} onChange={(e) => updateForm("phone", e.target.value)} placeholder="+41 79 000 00 00" />
+                      </div>
+                      <div className="form-row">
+                        <label>Conseiller</label>
+                        <select value={form.advisor} onChange={(e) => updateForm("advisor", e.target.value)}>
+                          <option value="Benoit">Benoit</option>
+                          <option value="Thaiana">Thaiana</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-row-split">
+                      <div className="form-row">
+                        <label>Adresse</label>
+                        <input type="text" value={form.address} onChange={(e) => updateForm("address", e.target.value)} placeholder="Rue Exemple 1, 1200 Genève" />
+                      </div>
+                      <div className="form-row">
+                        <label>Pays</label>
+                        <input type="text" value={form.country} onChange={(e) => updateForm("country", e.target.value)} placeholder="Suisse" />
+                      </div>
+                    </div>
+                    <div className="form-row-split">
+                      <div className="form-row">
+                        <label>Date de naissance</label>
+                        <input type="date" value={form.birthDate} onChange={(e) => updateForm("birthDate", e.target.value)} />
+                      </div>
+                      <div className="form-row">
+                        <label>Situation familiale</label>
+                        <select value={form.situationFamiliale} onChange={(e) => updateForm("situationFamiliale", e.target.value)}>
+                          <option value="Célibataire">Célibataire</option>
+                          <option value="Marié(e)">Marié(e)</option>
+                          <option value="Concubinage">Concubinage</option>
+                          <option value="Divorcé(e)">Divorcé(e)</option>
+                          <option value="Veuf(ve)">Veuf(ve)</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-row-split">
+                      <div className="form-row">
+                        <label>Source de revenu</label>
+                        <input type="text" value={form.revenuSource} onChange={(e) => updateForm("revenuSource", e.target.value)} placeholder="Salarié, indépendant…" />
+                      </div>
+                    </div>
+                    <div className="form-row-split">
+                      <div className="form-row">
+                        <label>Revenu annuel (CHF)</label>
+                        <input type="number" value={form.revenuAnnuel} onChange={(e) => updateForm("revenuAnnuel", e.target.value)} placeholder="90000" />
+                      </div>
+                      <div className="form-row">
+                        <label>Logement</label>
+                        <select value={form.logement} onChange={(e) => updateForm("logement", e.target.value)}>
+                          <option value="Locataire">Locataire</option>
+                          <option value="Propriétaire">Propriétaire</option>
+                        </select>
+                      </div>
+                    </div>
+                    {form.logement === "Propriétaire" && (
+                      <div className="form-row-split">
+                        <div className="form-row">
+                          <label>Crédit restant à rembourser (CHF)</label>
+                          <input type="number" value={form.creditRestant} onChange={(e) => updateForm("creditRestant", e.target.value)} placeholder="250000" />
+                        </div>
+                        <div className="form-row">
+                          <label>Estimation du bien (CHF)</label>
+                          <input type="number" value={form.estimationBien} onChange={(e) => updateForm("estimationBien", e.target.value)} placeholder="600000" />
+                        </div>
+                      </div>
+                    )}
+                    <div className="form-row">
+                      <label>Autres placements (3e pilier ou autres, ailleurs)</label>
+                      <input type="text" value={form.autresPlacements} onChange={(e) => updateForm("autresPlacements", e.target.value)} placeholder="Ex: 3e pilier chez Swiss Life, compte titres UBS…" />
+                    </div>
+                    <div className="form-row">
+                      <label>Certificat de salaire (optionnel)</label>
+                      <input type="file" onChange={(e) => updateForm("salaryFile", e.target.files[0] || null)} />
+                    </div>
+                  </>
+                )}
+
+                <div className="form-row-split">
+                  <div className="form-row">
+                    <label>Pilier</label>
+                    <select value={form.pillar} onChange={(e) => updateForm("pillar", e.target.value)}>
+                      <option value="2e pilier">2e pilier</option>
+                      <option value="3e pilier A">3e pilier A</option>
+                      <option value="3e pilier B">3e pilier B</option>
+                    </select>
+                  </div>
+                  <div className="form-row">
+                    <label>Capital (CHF) *</label>
+                    <input type="number" value={form.capital} onChange={(e) => updateForm("capital", e.target.value)} placeholder="50000" />
+                  </div>
+                </div>
+                <div className="form-row-split">
+                  <div className="form-row">
+                    <label>Statut</label>
+                    <select value={form.status} onChange={(e) => updateForm("status", e.target.value)}>
+                      {STATUSES.filter((s) => s !== "Tous").map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  {form.pillar === "2e pilier" && (
+                    <div className="form-row">
+                      <label>Date de signature</label>
+                      <input type="date" value={form.dateSignature} onChange={(e) => updateForm("dateSignature", e.target.value)} />
+                    </div>
+                  )}
+                </div>
+                {form.pillar !== "2e pilier" && (
+                  <div className="form-row-split">
+                    <div className="form-row">
+                      <label>Date de début</label>
+                      <input type="date" value={form.dateDebut} onChange={(e) => updateForm("dateDebut", e.target.value)} />
+                    </div>
+                    <div className="form-row">
+                      <label>Date de fin</label>
+                      <input type="date" value={form.dateFin} onChange={(e) => updateForm("dateFin", e.target.value)} />
+                    </div>
+                  </div>
+                )}
+                {form.pillar !== "2e pilier" && (
+                  <div className="form-row-split">
+                    <div className="form-row">
+                      <label>Montant de la prime</label>
+                      <input type="number" value={form.primeAmount} onChange={(e) => updateForm("primeAmount", e.target.value)} placeholder="3000" />
+                    </div>
+                    <div className="form-row">
+                      <label>Fréquence</label>
+                      <select value={form.primeFrequency} onChange={(e) => updateForm("primeFrequency", e.target.value)}>
+                        <option value="Annuelle">Annuelle</option>
+                        <option value="Mensuelle">Mensuelle</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {form.pillar === "2e pilier" ? (
+                  <div className="form-row-split">
+                    <div className="form-row">
+                      <label>Fondation</label>
+                      <select value={form.fund} onChange={(e) => updateForm("fund", e.target.value)}>
+                        {FUNDS.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="form-row">
+                      <label>Profil de risque</label>
+                      <select value={form.profile} onChange={(e) => updateForm("profile", e.target.value)}>
+                        {RISK_PROFILES.map((p) => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                ) : null}
+                {form.pillar === "2e pilier" ? (
+                  <div className="form-row-split">
+                    <div className="form-row">
+                      <label>Taux commission signature (%)</label>
+                      <input type="number" step="0.1" min="0" value={form.signatureRate} onChange={(e) => updateForm("signatureRate", e.target.value)} placeholder="3" />
+                    </div>
+                    <div className="form-row"></div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="form-row-split">
+                      <div className="form-row">
+                        <label>Type de produit</label>
+                        <select value={form.productType} onChange={(e) => updateForm("productType", e.target.value)}>
+                          <option value="Bancaire">Bancaire</option>
+                          <option value="Assurance">Assurance</option>
+                          <option value="Fonds de placement">Fonds de placement</option>
+                        </select>
+                      </div>
+                      {form.productType === "Assurance" && (
+                        <div className="form-row">
+                          <label>Garantie (Select)</label>
+                          <select value={form.select} onChange={(e) => updateForm("select", e.target.value)}>
+                            {SELECT_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                    {form.productType === "Assurance" && (
+                      <div className="form-row-split">
+                        <div className="form-row">
+                          <label>Compagnie d'assurance</label>
+                          <input type="text" list="insurer-list" value={form.insurer} onChange={(e) => updateForm("insurer", e.target.value)} placeholder="Nom de l'assurance" />
+                          <datalist id="insurer-list">
+                            {insurers.map((i) => <option key={i} value={i} />)}
+                          </datalist>
+                        </div>
+                        <div className="form-row"></div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {formError && <div className="form-error">{formError}</div>}
+              </div>
+              <div className="form-foot">
+                <button className="btn-secondary" onClick={() => setShowForm(false)}>Annuler</button>
+                <button className="btn-primary" onClick={submitForm}>Enregistrer</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {toast && <div className="toast">{toast}</div>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(CRMPrototype));
+</script>
+
+<script>
+  // Manually transform with the classic runtime so the output calls
+  // React.createElement directly instead of emitting "import" statements
+  // (which a plain <script> tag cannot execute and causes a blank page).
+  var source = document.getElementById("app-source").textContent;
+  var compiled = Babel.transform(source, {
+    presets: [["react", { runtime: "classic" }]]
+  }).code;
+  try {
+    new Function("React", "ReactDOM", "document", compiled)(React, ReactDOM, document);
+  } catch (e) {
+    document.getElementById("root").innerHTML =
+      '<pre style="padding:24px;color:#A23B2E;font-family:monospace;white-space:pre-wrap;">' +
+      'Erreur de chargement de la démo :\n' + e.message + '</pre>';
+  }
+</script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+* { box-sizing: border-box; }
+.app {
+  --bg: #F7F6F2; --surface: #FFFFFF; --sidebar-bg: #16213B; --sidebar-text: #A9B4C6;
+  --ink: #1B2333; --ink-soft: #5B6478; --accent: #2F6F5E; --accent-soft: #E3ECE8;
+  --amber: #A6761E; --amber-soft: #F3E9D6; --red: #A23B2E; --red-soft: #F5E3DF; --border: #E2DFD7;
+  font-family: 'IBM Plex Sans', sans-serif; color: var(--ink); background: var(--bg);
+  display: flex; width: 100%; min-height: 100vh;
+}
+.sidebar { width: 216px; flex-shrink: 0; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; padding: 22px 16px; }
+.brand { font-family: 'Source Serif 4', serif; font-size: 18px; color: #fff; font-weight: 600; padding: 0 8px 22px 8px; border-bottom: 1px solid rgba(255,255,255,0.12); margin-bottom: 18px; }
+.brand span { display: block; font-family: 'IBM Plex Sans', sans-serif; font-size: 11.5px; color: var(--sidebar-text); font-weight: 400; margin-top: 3px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 3px; font-size: 14px; cursor: pointer; color: var(--sidebar-text); margin-bottom: 2px; border-left: 2px solid transparent; }
+.nav-item:hover { color: #fff; }
+.nav-item.active { color: #fff; background: rgba(255,255,255,0.07); border-left: 2px solid var(--accent); }
+.sub-nav { margin: 2px 0 6px 10px; border-left: 1px solid rgba(255,255,255,0.14); }
+.sub-nav-item { padding: 7px 10px 7px 16px; font-size: 12.5px; color: var(--sidebar-text); cursor: pointer; }
+.sub-nav-item:hover { color: #fff; }
+.sub-nav-item.active { color: #fff; font-weight: 500; }
+.nav-spacer { flex: 1; }
+.sidebar-foot { font-size: 11.5px; color: var(--sidebar-text); padding: 10px 8px 0 8px; border-top: 1px solid rgba(255,255,255,0.12); line-height: 1.5; }
+.main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 18px 28px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.topbar h1 { font-family: 'Source Serif 4', serif; font-size: 20px; font-weight: 600; margin: 0; }
+.search-box { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); padding: 7px 12px; width: 260px; background: var(--bg); }
+.search-box input { border: none; background: transparent; outline: none; font-size: 13.5px; width: 100%; color: var(--ink); font-family: 'IBM Plex Sans', sans-serif; }
+.btn-primary { background: var(--accent); color: #fff; border: none; padding: 9px 16px; font-size: 13.5px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-weight: 500; }
+.btn-primary:hover { background: #275b4d; }
+.content { padding: 26px 28px; overflow-y: auto; flex: 1; }
+.kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 26px; }
+.kpi { background: var(--surface); padding: 18px 20px; }
+.kpi.kpi-split { grid-column: span 2; }
+.kpi .label { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 8px; }
+.kpi .value { font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 500; }
+.kpi .value.accent { color: var(--accent); }
+.kpi-split-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 12.5px; color: var(--ink-soft); padding: 3px 0; }
+.kpi-split-row span:first-child { white-space: nowrap; }
+.kpi-split-row .num-right { font-family: 'IBM Plex Mono', monospace; color: var(--ink); white-space: nowrap; }
+.kpi-split-highlight span:first-child { color: var(--accent); font-weight: 500; }
+.kpi-split-highlight .num-right { color: var(--accent); font-weight: 500; }
+.kpi-split-total { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 12.5px; font-weight: 500; padding-top: 7px; margin-top: 5px; border-top: 1px solid var(--border); }
+.kpi-split-total .num-right { font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
+.panel-row { display: grid; grid-template-columns: 1.2fr 1fr; gap: 22px; }
+.pillar-row { padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.pillar-row:last-child { border-bottom: none; }
+.pillar-row-head { display: flex; justify-content: space-between; font-size: 13.5px; margin-bottom: 8px; }
+.pillar-row-head .num-right { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--ink-soft); }
+.pillar-bar-track { height: 6px; background: var(--bg); border: 1px solid var(--border); }
+.pillar-bar-fill { height: 100%; background: var(--accent); }
+.panel { background: var(--surface); border: 1px solid var(--border); }
+.panel h2 { font-family: 'Source Serif 4', serif; font-size: 15.5px; font-weight: 600; margin: 0; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.panel-head-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px; }
+.rate-input { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-soft); }
+.rate-input input { width: 52px; border: 1px solid var(--border); padding: 4px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--ink); text-align: right; }
+.rate-input input:disabled { background: var(--bg); color: var(--ink-soft); }
+.list-row { display: flex; justify-content: space-between; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.list-row:last-child { border-bottom: none; }
+.list-row .muted { color: var(--ink-soft); font-size: 12.5px; }
+.list-row .num-right { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; }
+table { width: 100%; border-collapse: collapse; background: var(--surface); }
+thead th { text-align: left; font-size: 12px; color: var(--ink-soft); font-weight: 500; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+tbody td { padding: 11px 16px; font-size: 13.5px; border-bottom: 1px solid var(--border); }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--bg); }
+.cell-num { font-family: 'IBM Plex Mono', monospace; }
+.advisor-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+.advisor-legend { display: flex; gap: 16px; align-items: center; font-size: 12px; color: var(--ink-soft); margin-bottom: 14px; }
+.advisor-legend span { display: flex; align-items: center; gap: 6px; }
+.badge { display: inline-block; font-size: 11.5px; padding: 3px 8px; border: 1px solid transparent; }
+.badge-accent { background: var(--accent-soft); color: var(--accent); }
+.badge-amber { background: var(--amber-soft); color: var(--amber); }
+.badge-red { background: var(--red-soft); color: var(--red); }
+.badge-neutral { background: var(--bg); color: var(--ink-soft); border-color: var(--border); }
+.pillar-tag { font-size: 11.5px; color: var(--ink-soft); border: 1px solid var(--border); padding: 2px 7px; }
+.table-note { font-size: 12px; color: var(--ink-soft); margin-bottom: 12px; }
+.filter-bar { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+.filter-select { border: 1px solid var(--border); background: var(--surface); padding: 7px 10px; font-size: 13px; color: var(--ink); font-family: 'IBM Plex Sans', sans-serif; }
+.filter-clear { border: none; background: none; color: var(--ink-soft); font-size: 12.5px; text-decoration: underline; cursor: pointer; padding: 4px; font-family: 'IBM Plex Sans', sans-serif; }
+.filter-clear:hover { color: var(--ink); }
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { color: var(--ink); }
+.detail-overlay { position: fixed; inset: 0; background: rgba(20,20,20,0.25); display: flex; justify-content: flex-end; }
+.detail-panel { width: 380px; max-width: 90vw; background: var(--surface); height: 100%; overflow-y: auto; border-left: 1px solid var(--border); }
+.detail-head { padding: 20px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; }
+.detail-head h2 { font-family: 'Source Serif 4', serif; font-size: 18px; margin: 0 0 4px 0; }
+.detail-head .muted { font-size: 13px; color: var(--ink-soft); }
+.close-btn { cursor: pointer; color: var(--ink-soft); background: none; border: none; }
+.detail-section { padding: 18px 22px; border-bottom: 1px solid var(--border); }
+.dossier-block { border-bottom: 4px solid var(--bg); }
+.dossier-block-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 22px 0 22px; }
+.detail-section h3 { font-size: 12px; color: var(--ink-soft); margin: 0 0 10px 0; font-weight: 500; }
+.kv { display: flex; justify-content: space-between; font-size: 13.5px; padding: 6px 0; }
+.hist-item { font-size: 12.5px; color: var(--ink-soft); padding: 6px 0; border-bottom: 1px dashed var(--border); }
+.hist-item:last-child { border-bottom: none; }
+.pipeline { display: flex; gap: 14px; align-items: flex-start; }
+.stage-col { flex: 1; min-width: 0; }
+.stage-head { font-size: 12.5px; color: var(--ink-soft); padding: 0 4px 10px 4px; display: flex; justify-content: space-between; }
+.stage-card { background: var(--surface); border: 1px solid var(--border); padding: 12px 13px; margin-bottom: 10px; }
+.stage-card .name { font-size: 13.5px; font-weight: 500; margin-bottom: 3px; }
+.stage-card .muted { font-size: 12px; color: var(--ink-soft); margin-bottom: 8px; }
+.stage-card .cap { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; margin-bottom: 10px; }
+.stage-nav { display: flex; justify-content: space-between; }
+.stage-nav button { background: none; border: 1px solid var(--border); cursor: pointer; padding: 3px 7px; color: var(--ink-soft); }
+.stage-nav button:hover { color: var(--ink); border-color: var(--ink-soft); }
+.stage-nav button:disabled { opacity: 0.3; cursor: default; }
+.rdv-row { margin-bottom: 6px; }
+.rdv-input { width: 100%; border: 1px solid var(--border); padding: 5px 6px; font-size: 11.5px; font-family: 'IBM Plex Sans', sans-serif; color: var(--ink); background: var(--surface); box-sizing: border-box; }
+.ics-link { display: block; font-size: 11.5px; color: var(--accent); text-decoration: none; margin-bottom: 8px; }
+.ics-link:hover { text-decoration: underline; }
+.toast { position: fixed; bottom: 22px; right: 28px; background: var(--ink); color: #fff; font-size: 13px; padding: 11px 16px; max-width: 280px; }
+
+.form-overlay { position: fixed; inset: 0; background: rgba(20,20,20,0.35); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+.form-panel { background: var(--surface); width: 100%; max-width: 460px; max-height: 88vh; overflow-y: auto; border: 1px solid var(--border); }
+.form-head { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+.form-head h2 { font-family: 'Source Serif 4', serif; font-size: 17px; margin: 0; }
+.form-body { padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; }
+.form-row { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.form-row label { font-size: 12px; color: var(--ink-soft); }
+.form-row input, .form-row select {
+  border: 1px solid var(--border); padding: 8px 10px; font-size: 13.5px; color: var(--ink);
+  font-family: 'IBM Plex Sans', sans-serif; background: var(--surface);
+}
+.notes-textarea {
+  width: 100%; border: 1px solid var(--border); padding: 10px 12px; font-size: 13px; color: var(--ink);
+  font-family: 'IBM Plex Sans', sans-serif; resize: vertical; box-sizing: border-box;
+}
+.form-row-split { display: flex; gap: 14px; }
+.form-error { font-size: 12.5px; color: var(--red); background: var(--red-soft); padding: 8px 10px; }
+.form-foot { padding: 16px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+.btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--border); padding: 9px 16px; font-size: 13.5px; cursor: pointer; font-family: 'IBM Plex Sans', sans-serif; font-weight: 500; }
+.btn-secondary:hover { background: var(--bg); }
+@media (max-width: 780px) {
+  .app { flex-direction: column; min-height: auto; }
+  .sidebar { width: 100%; flex-direction: row; align-items: center; padding: 10px 14px; overflow-x: auto; }
+  .brand { display: none; }
+  .nav-spacer { display: none; }
+  .sidebar-foot { display: none; }
+  .nav-item { margin-bottom: 0; margin-right: 4px; white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; padding: 8px 10px; }
+  .nav-item.active { border-left: none; border-bottom: 2px solid var(--accent); background: transparent; }
+  .sub-nav { display: flex; margin: 0; border-left: none; }
+  .sub-nav-item { padding: 8px 8px; white-space: nowrap; border-bottom: 2px solid transparent; }
+  .sub-nav-item.active { border-bottom: 2px solid var(--accent); }
+  .topbar { flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 16px; }
+  .topbar > div { flex-direction: column; align-items: stretch; width: 100%; }
+  .topbar h1 { font-size: 17px; }
+  .search-box { width: 100%; }
+  .btn-primary { width: 100%; }
+  .content { padding: 16px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); margin-bottom: 18px; }
+  .kpi { padding: 14px; }
+  .kpi .value { font-size: 18px; }
+  .panel-row { grid-template-columns: 1fr; gap: 14px; }
+  table { display: block; }
+  thead { display: none; }
+  tbody, tr, td { display: block; width: 100%; }
+  tbody tr { border: 1px solid var(--border); margin-bottom: 10px; padding: 4px 0; }
+  tbody td { border-bottom: none; padding: 5px 16px; }
+  tbody td::before { content: attr(data-label); display: block; font-size: 11px; color: var(--ink-soft); margin-bottom: 2px; }
+  .pipeline { overflow-x: auto; padding-bottom: 6px; }
+  .stage-col { min-width: 220px; }
+  .detail-panel { width: 100%; max-width: 100%; }
+  .filter-bar { gap: 8px; }
+  .filter-select { flex: 1; min-width: 130px; }
+  .form-row-split { flex-direction: column; }
+  .form-panel { max-width: 100%; }
+}
+</style>
+</body>
+</html>
